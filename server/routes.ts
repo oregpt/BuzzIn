@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           case 'select_question': {
-            const { category, value } = message.data;
+            const { category, value, selectedBy } = message.data;
             if (!ws.gameId) break;
 
             const questions = await storage.getAllQuestions();
@@ -151,9 +151,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Clear any existing buzzes for this question
             await storage.clearBuzzesForQuestion(question.id);
 
+            let selectedByName = "Host";
+            if (selectedBy) {
+              const selectorPlayer = await storage.getPlayer(selectedBy);
+              if (selectorPlayer) {
+                selectedByName = selectorPlayer.name;
+              }
+            }
+
             broadcastToGame(ws.gameId, {
               type: "question_selected",
-              data: { question }
+              data: { question, selectedBy: selectedByName }
             });
             break;
           }
@@ -167,13 +175,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const existingBuzzes = await storage.getBuzzesByQuestion(questionId);
             const isFirst = existingBuzzes.length === 0;
+            const buzzOrder = existingBuzzes.length + 1;
 
             const buzz = await storage.createBuzz({
               gameId: ws.gameId,
               playerId: ws.playerId,
               questionId,
               isFirst,
+              buzzOrder,
             });
+
+            // Get all buzzes for this question with player names
+            const allBuzzes = await storage.getBuzzesByQuestion(questionId);
+            const buzzeswithPlayerNames = await Promise.all(
+              allBuzzes.map(async (b) => {
+                const p = await storage.getPlayer(b.playerId);
+                return {
+                  playerId: b.playerId,
+                  playerName: p?.name || 'Unknown',
+                  timestamp: b.timestamp.getTime(),
+                  buzzOrder: b.buzzOrder,
+                  isFirst: b.isFirst
+                };
+              })
+            );
 
             broadcastToGame(ws.gameId, {
               type: "buzz_received",
@@ -181,8 +206,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 playerId: ws.playerId,
                 playerName: player.name,
                 timestamp: buzz.timestamp.getTime(),
-                isFirst
+                isFirst,
+                buzzOrder
               }
+            });
+
+            // Send complete buzz order update
+            broadcastToGame(ws.gameId, {
+              type: "buzz_order_update",
+              data: { buzzes: buzzeswithPlayerNames }
             });
             break;
           }
@@ -226,16 +258,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const pointsAwarded = isCorrect || acceptClose ? question.value : -question.value;
             const newScore = player.score + pointsAwarded;
+            const wasCorrect = isCorrect || !!acceptClose;
 
             await storage.updatePlayer(playerId, { score: newScore });
+
+            // If answer was correct, this player gets to pick next
+            if (wasCorrect) {
+              await storage.updateGame(ws.gameId, { lastCorrectPlayerId: playerId });
+            }
 
             broadcastToGame(ws.gameId, {
               type: "answer_marked",
               data: {
                 playerId,
-                isCorrect: isCorrect || !!acceptClose,
+                isCorrect: wasCorrect,
                 pointsAwarded,
-                newScore
+                newScore,
+                canPickNext: wasCorrect
               }
             });
             break;
@@ -244,6 +283,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           case 'close_question': {
             if (!ws.gameId) break;
 
+            const game = await storage.getGame(ws.gameId);
+            let nextPicker = undefined;
+
+            if (game?.lastCorrectPlayerId) {
+              const nextPickerPlayer = await storage.getPlayer(game.lastCorrectPlayerId);
+              if (nextPickerPlayer) {
+                nextPicker = {
+                  playerId: nextPickerPlayer.id,
+                  playerName: nextPickerPlayer.name
+                };
+              }
+            }
+
             await storage.updateGame(ws.gameId, { 
               currentQuestionId: null,
               status: "waiting"
@@ -251,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             broadcastToGame(ws.gameId, {
               type: "question_closed",
-              data: {}
+              data: { nextPicker }
             });
             break;
           }

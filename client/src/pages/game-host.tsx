@@ -18,6 +18,7 @@ interface GameState {
     playerName: string;
     timestamp: number;
     isFirst: boolean;
+    buzzOrder: number;
   }>;
   submittedAnswers: Array<{
     playerId: string;
@@ -25,6 +26,8 @@ interface GameState {
     answer: string;
   }>;
   usedQuestions: Set<string>;
+  nextPicker: { playerId: string; playerName: string } | null;
+  selectedBy: string | null;
 }
 
 export default function GameHost() {
@@ -40,6 +43,8 @@ export default function GameHost() {
     buzzerResults: [],
     submittedAnswers: [],
     usedQuestions: new Set(),
+    nextPicker: null,
+    selectedBy: null,
   });
 
   const [showQuestion, setShowQuestion] = useState(false);
@@ -76,6 +81,7 @@ export default function GameHost() {
       currentQuestion: data.question,
       buzzerResults: [],
       submittedAnswers: [],
+      selectedBy: data.selectedBy || null,
     }));
     setShowQuestion(true);
   });
@@ -83,7 +89,14 @@ export default function GameHost() {
   onMessage("buzz_received", (data) => {
     setGameState(prev => ({
       ...prev,
-      buzzerResults: [...prev.buzzerResults, data].sort((a, b) => a.timestamp - b.timestamp)
+      buzzerResults: [...prev.buzzerResults, data].sort((a, b) => a.buzzOrder - b.buzzOrder)
+    }));
+  });
+
+  onMessage("buzz_order_update", (data) => {
+    setGameState(prev => ({
+      ...prev,
+      buzzerResults: data.buzzes.sort((a: any, b: any) => a.buzzOrder - b.buzzOrder)
     }));
   });
 
@@ -111,12 +124,13 @@ export default function GameHost() {
     });
   });
 
-  onMessage("question_closed", () => {
+  onMessage("question_closed", (data) => {
     if (gameState.currentQuestion) {
       setGameState(prev => ({
         ...prev,
         currentQuestion: null,
-        usedQuestions: new Set([...prev.usedQuestions, prev.currentQuestion!.id])
+        usedQuestions: new Set(Array.from(prev.usedQuestions).concat([prev.currentQuestion!.id])),
+        nextPicker: data.nextPicker || null,
       }));
     }
     setShowQuestion(false);
@@ -128,7 +142,11 @@ export default function GameHost() {
 
     sendMessage({
       type: "select_question",
-      data: { category, value }
+      data: { 
+        category, 
+        value,
+        selectedBy: gameState.nextPicker?.playerId 
+      }
     });
   };
 
@@ -173,6 +191,12 @@ export default function GameHost() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
+                {gameState.nextPicker && (
+                  <div className="bg-game-accent px-4 py-2 rounded-lg">
+                    <span className="text-sm text-game-dark">Next Picker:</span>
+                    <span className="ml-2 font-bold text-game-dark">{gameState.nextPicker.playerName}</span>
+                  </div>
+                )}
                 {firstBuzzer && (
                   <div className="bg-game-primary px-4 py-2 rounded-lg">
                     <span className="text-sm text-gray-300">Current Turn:</span>
@@ -272,21 +296,39 @@ export default function GameHost() {
                 <div className="text-game-secondary font-game text-2xl font-bold mb-2">
                   {gameState.currentQuestion.category} - {formatCurrency(gameState.currentQuestion.value)}
                 </div>
+{gameState.selectedBy && (
+                  <div className="text-gray-400 text-sm mb-4">
+                    Selected by {gameState.selectedBy}
+                  </div>
+                )}
                 <div className="text-white text-3xl md:text-4xl font-bold leading-tight">
                   {gameState.currentQuestion.question}
                 </div>
               </div>
 
-              {/* Buzzer Status */}
-              {firstBuzzer && (
+              {/* Buzz Order Display */}
+              {gameState.buzzerResults.length > 0 && (
                 <Card className="bg-game-primary mb-8">
-                  <CardContent className="pt-6 text-center">
-                    <div className="text-white text-lg mb-2">First to Buzz:</div>
-                    <div className="text-game-secondary text-2xl font-bold font-game">
-                      {firstBuzzer.playerName}
-                    </div>
-                    <div className="text-gray-300 text-sm mt-2">
-                      {((firstBuzzer.timestamp % 1000) / 1000).toFixed(2)}s
+                  <CardContent className="pt-6">
+                    <div className="text-white text-lg mb-4 text-center">Buzz Order:</div>
+                    <div className="space-y-2">
+                      {gameState.buzzerResults.map((buzz, index) => (
+                        <div 
+                          key={buzz.playerId}
+                          className={`flex items-center justify-between p-3 rounded-lg ${
+                            buzz.isFirst ? 'bg-game-accent text-game-dark' : 'bg-game-dark text-white'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <span className="font-bold text-lg mr-3">#{buzz.buzzOrder}</span>
+                            <span className="font-medium">{buzz.playerName}</span>
+                            {buzz.isFirst && <Star className="ml-2 h-4 w-4" />}
+                          </div>
+                          <div className="text-sm opacity-75">
+                            {((buzz.timestamp % 1000) / 1000).toFixed(2)}s
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -295,7 +337,7 @@ export default function GameHost() {
               {/* Question Options */}
               {gameState.currentQuestion.type === 'multiple_choice' && gameState.currentQuestion.options && (
                 <div className="space-y-4 mb-8">
-                  {(gameState.currentQuestion.options as string[]).map((option, index) => (
+                  {(gameState.currentQuestion.options as string[]).map((option: string, index: number) => (
                     <div
                       key={index}
                       className="w-full bg-game-dark p-4 rounded-lg border border-gray-600"

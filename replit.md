@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a real-time multiplayer trivia game application built with a React frontend and Express.js backend. The application uses WebSocket connections for real-time communication between players and hosts, featuring a Jeopardy-style game format with buzzer mechanics and scoring.
+This is a real-time multiplayer trivia game application built with a React frontend and Express.js backend. The application uses WebSocket connections for real-time communication between players and hosts, featuring a Jeopardy-style game format with enhanced buzzer mechanics, complete buzz order tracking, team selection functionality, and administrator oversight capabilities.
 
 ## User Preferences
 
@@ -100,3 +100,31 @@ Preferred communication style: Simple, everyday language.
 - Static assets served from Express in production build
 
 The application is structured for easy development with hot reloading and clear separation between frontend and backend concerns, while maintaining shared type safety through the common schema definitions.
+
+## Recent Enhancements (January 2025)
+
+### Enhanced Buzz Order Tracking
+- Complete buzz order tracking (1st, 2nd, 3rd, etc.) for all players
+- Real-time buzz order display on both host and player interfaces
+- Visual indicators showing exact timing and placement of each buzz
+- Persistent buzz history throughout the question lifecycle
+
+### Team Selection Functionality
+- Winner of previous question gets to pick the next question
+- Host can override team selection at any time
+- Clear visual indicators showing which team gets to select next
+- Automatic tracking of last correct answer for seamless game flow
+
+### Administrator Controls
+- Enhanced admin oversight with ability to approve close answers
+- Complete control over question flow and team selection
+- Real-time monitoring of all player interactions
+- Professional game show experience with big screen display support
+
+### Mobile-Optimized Interface  
+- Large, responsive buzzer button for mobile devices
+- Touch-friendly interface designed for phone gameplay
+- Real-time feedback and status updates
+- Optimized for teams playing on individual mobile devices while watching a main display
+
+These enhancements transform the application into a professional-grade trivia experience suitable for both casual games and organized events, with the host managing the main display while teams participate via their mobile devices.

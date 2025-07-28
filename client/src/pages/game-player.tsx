@@ -100,12 +100,13 @@ export default function GamePlayer() {
 
   onMessage("buzz_received", (data) => {
     if (data.playerId === playerState.playerId) {
+      const ordinal = getOrdinal(data.buzzOrder);
       setPlayerState(prev => ({
         ...prev,
         hasBuzzed: true,
-        buzzRank: data.isFirst ? 1 : prev.buzzRank + 1,
+        buzzRank: data.buzzOrder,
         canAnswer: data.isFirst && prev.currentQuestion?.type === 'specific_answer',
-        gameStatus: data.isFirst ? "You buzzed first! " + (prev.currentQuestion?.type === 'specific_answer' ? "Enter your answer." : "Waiting for host...") : `You buzzed in ${prev.buzzRank === 0 ? '2nd' : prev.buzzRank + 1}${prev.buzzRank === 1 ? 'nd' : prev.buzzRank === 2 ? 'rd' : 'th'} place`,
+        gameStatus: data.isFirst ? "You buzzed first! " + (prev.currentQuestion?.type === 'specific_answer' ? "Enter your answer." : "Waiting for host...") : `You buzzed in ${ordinal} place`,
       }));
     } else if (data.isFirst) {
       setPlayerState(prev => ({
@@ -114,6 +115,12 @@ export default function GamePlayer() {
       }));
     }
   });
+
+  const getOrdinal = (num: number) => {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const v = num % 100;
+    return num + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+  };
 
   onMessage("answer_marked", (data) => {
     if (data.playerId === playerState.playerId) {
@@ -241,7 +248,7 @@ export default function GamePlayer() {
             <CardContent className="pt-4">
               <div className="text-white text-lg font-bold">You buzzed in!</div>
               <div className="text-gray-300 text-sm">
-                {playerState.buzzRank === 1 ? 'First place!' : `${playerState.buzzRank}${playerState.buzzRank === 2 ? 'nd' : playerState.buzzRank === 3 ? 'rd' : 'th'} place`}
+                {playerState.buzzRank === 1 ? 'First place!' : `${getOrdinal(playerState.buzzRank)} place`}
               </div>
             </CardContent>
           </Card>

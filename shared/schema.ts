@@ -16,6 +16,7 @@ export const games = pgTable("games", {
   gameName: text("game_name").notNull(),
   status: text("status").notNull().default("waiting"), // "waiting", "active", "completed"
   currentQuestionId: varchar("current_question_id"),
+  lastCorrectPlayerId: varchar("last_correct_player_id"), // Who gets to pick next
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -47,6 +48,7 @@ export const buzzes = pgTable("buzzes", {
   questionId: varchar("question_id").notNull().references(() => questions.id, { onDelete: "cascade" }),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   isFirst: boolean("is_first").notNull().default(false),
+  buzzOrder: integer("buzz_order").notNull().default(1), // 1st, 2nd, 3rd, etc.
 });
 
 export const gameAnswers = pgTable("game_answers", {
@@ -105,7 +107,7 @@ export type GameAnswer = typeof gameAnswers.$inferSelect;
 export type WSMessage = 
   | { type: "join_game"; data: { roomCode: string; playerName: string } }
   | { type: "create_game"; data: { gameName: string; hostName: string } }
-  | { type: "select_question"; data: { category: string; value: number } }
+  | { type: "select_question"; data: { category: string; value: number; selectedBy?: string } }
   | { type: "buzz"; data: { questionId: string } }
   | { type: "submit_answer"; data: { questionId: string; answer: string } }
   | { type: "mark_answer"; data: { playerId: string; isCorrect: boolean; acceptClose?: boolean } }
@@ -116,11 +118,12 @@ export type WSResponse =
   | { type: "game_created"; data: { roomCode: string; gameId: string } }
   | { type: "game_joined"; data: { playerId: string; gameId: string; players: Player[] } }
   | { type: "player_joined"; data: { player: Player } }
-  | { type: "question_selected"; data: { question: Question } }
-  | { type: "buzz_received"; data: { playerId: string; playerName: string; timestamp: number; isFirst: boolean } }
+  | { type: "question_selected"; data: { question: Question; selectedBy?: string } }
+  | { type: "buzz_received"; data: { playerId: string; playerName: string; timestamp: number; isFirst: boolean; buzzOrder: number } }
   | { type: "answer_submitted"; data: { playerId: string; playerName: string; answer: string } }
-  | { type: "answer_marked"; data: { playerId: string; isCorrect: boolean; pointsAwarded: number; newScore: number } }
-  | { type: "question_closed"; data: {} }
+  | { type: "answer_marked"; data: { playerId: string; isCorrect: boolean; pointsAwarded: number; newScore: number; canPickNext: boolean } }
+  | { type: "question_closed"; data: { nextPicker?: { playerId: string; playerName: string } } }
   | { type: "game_ended"; data: { finalStandings: Array<Player & { rank: number }> } }
   | { type: "game_updated"; data: { game: Game; players: Player[] } }
+  | { type: "buzz_order_update"; data: { buzzes: Array<{ playerId: string; playerName: string; timestamp: number; buzzOrder: number; isFirst: boolean }> } }
   | { type: "error"; data: { message: string } };

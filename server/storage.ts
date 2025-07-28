@@ -126,8 +126,13 @@ export class MemStorage implements IStorage {
   async createGame(insertGame: InsertGame): Promise<Game> {
     const id = randomUUID();
     const game: Game = {
-      ...insertGame,
       id,
+      roomCode: insertGame.roomCode,
+      hostName: insertGame.hostName,
+      gameName: insertGame.gameName,
+      status: insertGame.status || "waiting",
+      currentQuestionId: insertGame.currentQuestionId || null,
+      lastCorrectPlayerId: null,
       createdAt: new Date(),
     };
     this.games.set(id, game);
@@ -158,8 +163,12 @@ export class MemStorage implements IStorage {
   async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
     const id = randomUUID();
     const player: Player = {
-      ...insertPlayer,
       id,
+      gameId: insertPlayer.gameId,
+      name: insertPlayer.name,
+      score: insertPlayer.score || 0,
+      isHost: insertPlayer.isHost || false,
+      socketId: insertPlayer.socketId || null,
       joinedAt: new Date(),
     };
     this.players.set(id, player);
@@ -190,8 +199,14 @@ export class MemStorage implements IStorage {
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
     const id = randomUUID();
     const question: Question = {
-      ...insertQuestion,
       id,
+      category: insertQuestion.category,
+      value: insertQuestion.value,
+      question: insertQuestion.question,
+      type: insertQuestion.type,
+      correctAnswer: insertQuestion.correctAnswer,
+      options: insertQuestion.options || null,
+      isUsed: insertQuestion.isUsed || false,
     };
     this.questions.set(id, question);
     return question;
@@ -217,9 +232,13 @@ export class MemStorage implements IStorage {
   async createBuzz(insertBuzz: InsertBuzz): Promise<Buzz> {
     const id = randomUUID();
     const buzz: Buzz = {
-      ...insertBuzz,
       id,
+      gameId: insertBuzz.gameId,
+      playerId: insertBuzz.playerId,
+      questionId: insertBuzz.questionId,
       timestamp: new Date(),
+      isFirst: insertBuzz.isFirst || false,
+      buzzOrder: insertBuzz.buzzOrder || 1,
     };
     this.buzzes.set(id, buzz);
     return buzz;
@@ -232,18 +251,25 @@ export class MemStorage implements IStorage {
   }
 
   async clearBuzzesForQuestion(questionId: string): Promise<void> {
-    for (const [id, buzz] of this.buzzes.entries()) {
+    const entriesToDelete: string[] = [];
+    this.buzzes.forEach((buzz, id) => {
       if (buzz.questionId === questionId) {
-        this.buzzes.delete(id);
+        entriesToDelete.push(id);
       }
-    }
+    });
+    entriesToDelete.forEach(id => this.buzzes.delete(id));
   }
 
   async createGameAnswer(insertAnswer: InsertGameAnswer): Promise<GameAnswer> {
     const id = randomUUID();
     const answer: GameAnswer = {
-      ...insertAnswer,
       id,
+      gameId: insertAnswer.gameId,
+      playerId: insertAnswer.playerId,
+      questionId: insertAnswer.questionId,
+      answer: insertAnswer.answer,
+      isCorrect: insertAnswer.isCorrect || null,
+      pointsAwarded: insertAnswer.pointsAwarded || 0,
       submittedAt: new Date(),
     };
     this.gameAnswers.set(id, answer);
