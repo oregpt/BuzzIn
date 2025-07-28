@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function GameLobby() {
   const [, navigate] = useLocation();
-  const { sendMessage, onMessage } = useWebSocket();
+  const { sendMessage, onMessage, isConnected } = useWebSocket();
   const { toast } = useToast();
 
   const [createForm, setCreateForm] = useState({
@@ -25,6 +25,17 @@ export default function GameLobby() {
 
   const handleCreateGame = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Create game button clicked', 'WebSocket connected:', isConnected);
+    
+    if (!isConnected) {
+      toast({
+        title: "Connection Error",
+        description: "WebSocket is not connected. Please wait and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (!createForm.gameName.trim() || !createForm.hostName.trim()) {
       toast({
         title: "Error",
@@ -34,6 +45,7 @@ export default function GameLobby() {
       return;
     }
 
+    console.log('Sending create_game message:', createForm);
     sendMessage({
       type: "create_game",
       data: {
@@ -89,6 +101,16 @@ export default function GameLobby() {
             JEOPARDY!
           </h1>
           <p className="text-xl text-gray-300 font-medium">Multiplayer Quiz Experience</p>
+          <div className="mt-4">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
+              isConnected ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`}>
+              <span className={`w-2 h-2 rounded-full mr-2 ${
+                isConnected ? 'bg-green-300' : 'bg-red-300'
+              }`}></span>
+              {isConnected ? 'Connected' : 'Connecting...'}
+            </span>
+          </div>
         </header>
 
         {/* Game Creation/Join Section */}

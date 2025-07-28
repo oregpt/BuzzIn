@@ -14,6 +14,7 @@ export function useWebSocket() {
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
+      console.log('WebSocket connected to:', wsUrl);
       setIsConnected(true);
     };
 
@@ -52,10 +53,12 @@ export function useWebSocket() {
   }, []);
 
   const sendMessage = useCallback((message: WSMessage) => {
+    console.log('Attempting to send message:', message, 'WebSocket state:', ws.current?.readyState);
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      console.log('Sending WebSocket message:', message);
       ws.current.send(JSON.stringify(message));
     } else {
-      console.warn('WebSocket is not connected');
+      console.warn('WebSocket is not connected, readyState:', ws.current?.readyState);
     }
   }, []);
 

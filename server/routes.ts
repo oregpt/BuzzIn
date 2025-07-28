@@ -39,9 +39,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   wss.on('connection', (ws: ExtendedWebSocket) => {
+    console.log('WebSocket connection established');
+    
     ws.on('message', async (data) => {
       try {
         const message: WSMessage = JSON.parse(data.toString());
+        console.log('Received message:', message.type, message.data);
 
         switch (message.type) {
           case 'create_game': {
@@ -73,6 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             gameConnections.get(game.id)!.add(host.id);
 
+            console.log('Sending game_created response to host:', host.id);
             sendToPlayer(host.id, {
               type: "game_created",
               data: { roomCode, gameId: game.id }
