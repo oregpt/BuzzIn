@@ -49,8 +49,21 @@ export default function GameHost() {
 
   const [showQuestion, setShowQuestion] = useState(false);
 
-  // Initialize from URL params or redirect
+  // Initialize from game setup or URL params
   useEffect(() => {
+    // Check for game setup data from the new flow
+    const gameSetup = localStorage.getItem('gameSetup');
+    if (gameSetup) {
+      const setup = JSON.parse(gameSetup);
+      setGameState(prev => ({ 
+        ...prev, 
+        roomCode: setup.roomCode,
+        gameId: `game_${Date.now()}` // Generate a temporary gameId for local use
+      }));
+      return;
+    }
+
+    // Fallback to URL params
     const urlParams = new URLSearchParams(window.location.search);
     const roomCode = urlParams.get('room');
     const gameId = urlParams.get('game');

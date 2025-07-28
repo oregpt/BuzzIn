@@ -77,10 +77,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameConnections.get(game.id)!.add(host.id);
 
             console.log('Sending game_created response to host:', host.id);
-            sendToPlayer(host.id, {
+            const response: WSResponse = {
               type: "game_created",
               data: { roomCode, gameId: game.id }
-            });
+            };
+            console.log('Response being sent:', response);
+            sendToPlayer(host.id, response);
             break;
           }
 
@@ -115,10 +117,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const allPlayers = await storage.getPlayersByGameId(game.id);
 
-            sendToPlayer(player.id, {
+            const joinResponse: WSResponse = {
               type: "game_joined",
               data: { playerId: player.id, gameId: game.id, players: allPlayers }
-            });
+            };
+            sendToPlayer(player.id, joinResponse);
 
             broadcastToGame(game.id, {
               type: "player_joined",

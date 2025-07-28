@@ -25,16 +25,6 @@ export default function GameLobby() {
 
   const handleCreateGame = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Create game button clicked', 'WebSocket connected:', isConnected);
-    
-    if (!isConnected) {
-      toast({
-        title: "Connection Error",
-        description: "WebSocket is not connected. Please wait and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
     
     if (!createForm.gameName.trim() || !createForm.hostName.trim()) {
       toast({
@@ -45,14 +35,9 @@ export default function GameLobby() {
       return;
     }
 
-    console.log('Sending create_game message:', createForm);
-    sendMessage({
-      type: "create_game",
-      data: {
-        gameName: createForm.gameName,
-        hostName: createForm.hostName,
-      },
-    });
+    // Store the basic info and navigate to setup page
+    localStorage.setItem('basicGameInfo', JSON.stringify(createForm));
+    navigate("/setup");
   };
 
   const handleJoinGame = (e: React.FormEvent) => {
@@ -76,11 +61,13 @@ export default function GameLobby() {
   };
 
   // Handle WebSocket responses
-  onMessage("game_created", () => {
+  onMessage("game_created", (data) => {
+    console.log('Game created successfully:', data);
     navigate("/host");
   });
 
-  onMessage("game_joined", () => {
+  onMessage("game_joined", (data) => {
+    console.log('Game joined successfully:', data);
     navigate("/play");
   });
 
@@ -158,7 +145,7 @@ export default function GameLobby() {
                   className="w-full bg-gradient-to-r from-game-accent to-emerald-600 hover:from-emerald-600 hover:to-game-accent text-white font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
                 >
                   <Gamepad className="mr-2" />
-                  Create Game Room
+                  Setup New Game
                 </Button>
               </form>
             </CardContent>

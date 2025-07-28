@@ -32,6 +32,7 @@ export function useWebSocket() {
     ws.current.onmessage = (event) => {
       try {
         const message: WSResponse = JSON.parse(event.data);
+        console.log('Received WebSocket message:', message);
         setLastMessage(message);
         
         // Call specific handler if registered
