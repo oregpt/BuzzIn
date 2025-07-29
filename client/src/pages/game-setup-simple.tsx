@@ -150,6 +150,7 @@ export default function GameSetupSimple() {
 
     const question: Question = {
       id: `q_${Date.now()}`,
+      gameId: "temp", // Will be updated when game is created
       category: actualCategory,
       value: actualValue,
       question: currentQuestion.question!,
@@ -184,11 +185,15 @@ export default function GameSetupSimple() {
   };
 
   const completeSetup = () => {
+    // Store game setup for host page
     localStorage.setItem('gameSetup', JSON.stringify(gameSetup));
     localStorage.setItem('roomCode', gameSetup.roomCode);
     localStorage.setItem('adminCode', gameSetup.adminCode);
     localStorage.setItem('hostName', gameSetup.hostName);
     localStorage.setItem('gameName', gameSetup.gameName);
+    localStorage.setItem('categories', JSON.stringify(gameSetup.categories));
+    
+    // Navigate to host page which will create the game with custom categories
     navigate('/host');
   };
 

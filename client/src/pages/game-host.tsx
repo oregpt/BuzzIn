@@ -11,6 +11,7 @@ import type { Player, Question } from "@shared/schema";
 interface GameState {
   roomCode: string;
   gameId: string;
+  categories: string[];
   players: Player[];
   currentQuestion: Question | null;
   buzzerResults: Array<{
@@ -38,6 +39,7 @@ export default function GameHost() {
   const [gameState, setGameState] = useState<GameState>({
     roomCode: "",
     gameId: "",
+    categories: DEFAULT_CATEGORIES,
     players: [],
     currentQuestion: null,
     buzzerResults: [],
@@ -55,11 +57,19 @@ export default function GameHost() {
     const gameSetup = localStorage.getItem('gameSetup');
     if (gameSetup) {
       const setup = JSON.parse(gameSetup);
-      setGameState(prev => ({ 
-        ...prev, 
-        roomCode: setup.roomCode,
-        gameId: `game_${Date.now()}` // Generate a temporary gameId for local use
-      }));
+      
+      // Create game with custom categories via WebSocket
+      sendMessage({
+        type: "create_game",
+        data: {
+          gameName: setup.gameName,
+          hostName: setup.hostName,
+          categories: setup.categories
+        }
+      });
+      
+      // Clear the setup data since we're now creating the game
+      localStorage.removeItem('gameSetup');
       return;
     }
 
@@ -74,9 +84,30 @@ export default function GameHost() {
     }
 
     setGameState(prev => ({ ...prev, roomCode, gameId }));
-  }, [navigate]);
+  }, [navigate, sendMessage]);
 
   // WebSocket message handlers
+  onMessage("game_created", (data) => {
+    // Get categories from setup if available
+    const storedCategories = localStorage.getItem('categories');
+    const categories = storedCategories ? JSON.parse(storedCategories) : DEFAULT_CATEGORIES;
+    
+    setGameState(prev => ({
+      ...prev,
+      roomCode: data.roomCode,
+      gameId: data.gameId,
+      categories: categories
+    }));
+    
+    // Clean up stored categories
+    localStorage.removeItem('categories');
+    
+    toast({
+      title: "Game Created!",
+      description: `Room Code: ${data.roomCode}`,
+    });
+  });
+
   onMessage("player_joined", (data) => {
     setGameState(prev => ({
       ...prev,
@@ -232,9 +263,9 @@ export default function GameHost() {
         {/* Game Board Grid */}
         <Card className="bg-game-surface border-border-game-gray mb-6">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-6 gap-3">
+            <div className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}>
               {/* Category Headers */}
-              {DEFAULT_CATEGORIES.map(category => (
+              {gameState.categories.map(category => (
                 <div
                   key={category}
                   className="bg-game-primary text-white p-4 rounded-lg text-center font-bold text-sm md:text-base"
@@ -245,7 +276,7 @@ export default function GameHost() {
 
               {/* Question Cards */}
               {VALUES.map(value => 
-                DEFAULT_CATEGORIES.map(category => {
+                gameState.categories.map(category => {
                   const questionKey = `${category}-${value}`;
                   const isUsed = gameState.usedQuestions.has(questionKey);
                   

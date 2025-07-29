@@ -48,16 +48,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         switch (message.type) {
           case 'create_game': {
-            const { gameName, hostName } = message.data;
+            const { gameName, hostName, categories } = message.data;
             const roomCode = await storage.generateRoomCode();
             
             const game = await storage.createGame({
               roomCode,
               hostName,
               gameName,
+              categories: categories || ["HISTORY", "SCIENCE", "SPORTS", "MOVIES", "GEOGRAPHY", "LITERATURE"],
               status: "waiting",
               currentQuestionId: null,
             });
+
+            // Initialize default questions for this game
+            await storage.initializeDefaultQuestions(game.id, game.categories as string[]);
 
             const host = await storage.createPlayer({
               gameId: game.id,

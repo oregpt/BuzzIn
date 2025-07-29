@@ -14,6 +14,7 @@ export const games = pgTable("games", {
   roomCode: varchar("room_code", { length: 4 }).notNull().unique(),
   hostName: text("host_name").notNull(),
   gameName: text("game_name").notNull(),
+  categories: json("categories").notNull(), // Array of category names
   status: text("status").notNull().default("waiting"), // "waiting", "active", "completed"
   currentQuestionId: varchar("current_question_id"),
   lastCorrectPlayerId: varchar("last_correct_player_id"), // Who gets to pick next
@@ -32,6 +33,7 @@ export const players = pgTable("players", {
 
 export const questions = pgTable("questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gameId: varchar("game_id").notNull().references(() => games.id, { onDelete: "cascade" }),
   category: text("category").notNull(),
   value: integer("value").notNull(),
   question: text("question").notNull(),
@@ -106,7 +108,7 @@ export type GameAnswer = typeof gameAnswers.$inferSelect;
 // WebSocket message types
 export type WSMessage = 
   | { type: "join_game"; data: { roomCode: string; playerName: string } }
-  | { type: "create_game"; data: { gameName: string; hostName: string } }
+  | { type: "create_game"; data: { gameName: string; hostName: string; categories?: string[] } }
   | { type: "select_question"; data: { category: string; value: number; selectedBy?: string } }
   | { type: "buzz"; data: { questionId: string } }
   | { type: "submit_answer"; data: { questionId: string; answer: string } }

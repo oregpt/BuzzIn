@@ -22,6 +22,7 @@ export interface IStorage {
   createQuestion(question: InsertQuestion): Promise<Question>;
   getQuestion(id: string): Promise<Question | undefined>;
   getAllQuestions(): Promise<Question[]>;
+  getQuestionsByGameId(gameId: string): Promise<Question[]>;
   updateQuestion(id: string, updates: Partial<Question>): Promise<Question | undefined>;
 
   // Buzz methods
@@ -35,6 +36,7 @@ export interface IStorage {
 
   // Utility methods
   generateRoomCode(): Promise<string>;
+  initializeDefaultQuestions(gameId: string, categories: string[]): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -105,6 +107,7 @@ export class MemStorage implements IStorage {
       const id = randomUUID();
       const question: Question = {
         id,
+        gameId: "default", // MemStorage uses a default game ID
         category: q.category,
         value: q.value,
         question: q.question,
@@ -132,6 +135,7 @@ export class MemStorage implements IStorage {
       roomCode: insertGame.roomCode,
       hostName: insertGame.hostName,
       gameName: insertGame.gameName,
+      categories: insertGame.categories || ["HISTORY", "SCIENCE", "SPORTS", "MOVIES", "GEOGRAPHY", "LITERATURE"],
       status: insertGame.status || "waiting",
       currentQuestionId: insertGame.currentQuestionId || null,
       lastCorrectPlayerId: null,
@@ -202,6 +206,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const question: Question = {
       id,
+      gameId: insertQuestion.gameId,
       category: insertQuestion.category,
       value: insertQuestion.value,
       question: insertQuestion.question,
@@ -220,6 +225,15 @@ export class MemStorage implements IStorage {
 
   async getAllQuestions(): Promise<Question[]> {
     return Array.from(this.questions.values());
+  }
+
+  async getQuestionsByGameId(gameId: string): Promise<Question[]> {
+    return Array.from(this.questions.values()).filter(q => q.gameId === gameId);
+  }
+
+  async initializeDefaultQuestions(gameId: string, categories: string[]): Promise<void> {
+    // MemStorage doesn't need this method as it initializes questions globally
+    // This is a no-op for backward compatibility
   }
 
   async updateQuestion(id: string, updates: Partial<Question>): Promise<Question | undefined> {
@@ -348,6 +362,134 @@ export class DatabaseStorage implements IStorage {
 
   async getAllQuestions(): Promise<Question[]> {
     return await db.select().from(questions);
+  }
+
+  async getQuestionsByGameId(gameId: string): Promise<Question[]> {
+    return await db.select().from(questions).where(eq(questions.gameId, gameId));
+  }
+
+  async initializeDefaultQuestions(gameId: string, categories: string[]): Promise<void> {
+    // Default questions data
+    const defaultQuestionsData = [
+      // HISTORY
+      { category: "HISTORY", value: 100, question: "What year did World War II end?", type: "specific_answer", correctAnswer: "1945", options: null },
+      { category: "HISTORY", value: 200, question: "Who was the first President of the United States?", type: "specific_answer", correctAnswer: "George Washington", options: null },
+      { category: "HISTORY", value: 300, question: "The Berlin Wall fell in which year?", type: "specific_answer", correctAnswer: "1989", options: null },
+      { category: "HISTORY", value: 400, question: "Which empire was ruled by Julius Caesar?", type: "specific_answer", correctAnswer: "Roman Empire", options: null },
+      { category: "HISTORY", value: 500, question: "What ancient wonder of the world was located in Alexandria?", type: "specific_answer", correctAnswer: "Lighthouse of Alexandria", options: null },
+
+      // SCIENCE
+      { category: "SCIENCE", value: 100, question: "Water boils at 100 degrees Celsius at sea level.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "SCIENCE", value: 200, question: "This planet is known as the Red Planet.", type: "specific_answer", correctAnswer: "Mars", options: null },
+      { category: "SCIENCE", value: 300, question: "What is the chemical symbol for gold?", type: "multiple_choice", correctAnswer: "B", options: ["Go", "Au", "Gd", "Ag"] },
+      { category: "SCIENCE", value: 400, question: "Einstein's theory of relativity includes both special and general relativity.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "SCIENCE", value: 500, question: "This scientist developed the periodic table of elements.", type: "specific_answer", correctAnswer: "Mendeleev", options: null },
+
+      // SPORTS
+      { category: "SPORTS", value: 100, question: "A basketball team has 5 players on the court at one time.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "SPORTS", value: 200, question: "This sport is known as 'the beautiful game'.", type: "specific_answer", correctAnswer: "Soccer", options: null },
+      { category: "SPORTS", value: 300, question: "How many holes are there in a standard round of golf?", type: "multiple_choice", correctAnswer: "B", options: ["16", "18", "20", "22"] },
+      { category: "SPORTS", value: 400, question: "The Olympics are held every 4 years.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "SPORTS", value: 500, question: "This boxer was known as 'The Greatest'.", type: "specific_answer", correctAnswer: "Muhammad Ali", options: null },
+
+      // MOVIES
+      { category: "MOVIES", value: 100, question: "The movie 'Titanic' won the Academy Award for Best Picture.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "MOVIES", value: 200, question: "This director created the 'Star Wars' saga.", type: "specific_answer", correctAnswer: "George Lucas", options: null },
+      { category: "MOVIES", value: 300, question: "Which movie features the quote 'Here's looking at you, kid'?", type: "multiple_choice", correctAnswer: "A", options: ["Casablanca", "Gone with the Wind", "The Maltese Falcon", "Citizen Kane"] },
+      { category: "MOVIES", value: 400, question: "The first movie ever made was in color.", type: "true_false", correctAnswer: "false", options: null },
+      { category: "MOVIES", value: 500, question: "This actor played the Joker in 'The Dark Knight'.", type: "specific_answer", correctAnswer: "Heath Ledger", options: null },
+
+      // GEOGRAPHY
+      { category: "GEOGRAPHY", value: 100, question: "The Amazon River is the longest river in the world.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "GEOGRAPHY", value: 200, question: "This is the capital of Australia.", type: "specific_answer", correctAnswer: "Canberra", options: null },
+      { category: "GEOGRAPHY", value: 300, question: "Which continent has the most countries?", type: "multiple_choice", correctAnswer: "A", options: ["Africa", "Asia", "Europe", "South America"] },
+      { category: "GEOGRAPHY", value: 400, question: "Mount Everest is located on the border of Nepal and Tibet.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "GEOGRAPHY", value: 500, question: "This desert is the largest hot desert in the world.", type: "specific_answer", correctAnswer: "Sahara", options: null },
+
+      // LITERATURE
+      { category: "LITERATURE", value: 100, question: "Shakespeare wrote 'Romeo and Juliet'.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "LITERATURE", value: 200, question: "This author wrote '1984' and 'Animal Farm'.", type: "specific_answer", correctAnswer: "George Orwell", options: null },
+      { category: "LITERATURE", value: 300, question: "Which novel begins with 'It was the best of times, it was the worst of times'?", type: "multiple_choice", correctAnswer: "C", options: ["Great Expectations", "Oliver Twist", "A Tale of Two Cities", "David Copperfield"] },
+      { category: "LITERATURE", value: 400, question: "The 'Harry Potter' series consists of 7 books.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "LITERATURE", value: 500, question: "This American author wrote 'The Great Gatsby'.", type: "specific_answer", correctAnswer: "F. Scott Fitzgerald", options: null },
+
+      // MUSIC
+      { category: "MUSIC", value: 100, question: "A standard piano has 88 keys.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "MUSIC", value: 200, question: "This composer wrote 'The Four Seasons'.", type: "specific_answer", correctAnswer: "Vivaldi", options: null },
+      { category: "MUSIC", value: 300, question: "Which instrument does Yo-Yo Ma famously play?", type: "multiple_choice", correctAnswer: "B", options: ["Violin", "Cello", "Piano", "Viola"] },
+      { category: "MUSIC", value: 400, question: "The Beatles were from Liverpool, England.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "MUSIC", value: 500, question: "This jazz musician was known as 'Satchmo'.", type: "specific_answer", correctAnswer: "Louis Armstrong", options: null },
+
+      // FOOD
+      { category: "FOOD", value: 100, question: "Tomatoes are technically a fruit.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "FOOD", value: 200, question: "This spice is derived from the Crocus flower.", type: "specific_answer", correctAnswer: "Saffron", options: null },
+      { category: "FOOD", value: 300, question: "Which country is credited with inventing pizza?", type: "multiple_choice", correctAnswer: "B", options: ["Greece", "Italy", "France", "Spain"] },
+      { category: "FOOD", value: 400, question: "Chocolate comes from cacao beans.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "FOOD", value: 500, question: "This French cooking technique involves cooking food slowly in its own fat.", type: "specific_answer", correctAnswer: "Confit", options: null },
+
+      // TECHNOLOGY
+      { category: "TECHNOLOGY", value: 100, question: "WWW stands for World Wide Web.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "TECHNOLOGY", value: 200, question: "This company created the iPhone.", type: "specific_answer", correctAnswer: "Apple", options: null },
+      { category: "TECHNOLOGY", value: 300, question: "What does 'AI' stand for in technology?", type: "multiple_choice", correctAnswer: "A", options: ["Artificial Intelligence", "Automated Integration", "Advanced Interface", "Application Infrastructure"] },
+      { category: "TECHNOLOGY", value: 400, question: "The first computer bug was actually a real insect.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "TECHNOLOGY", value: 500, question: "This programming language was created by Guido van Rossum.", type: "specific_answer", correctAnswer: "Python", options: null },
+
+      // NATURE
+      { category: "NATURE", value: 100, question: "Penguins can fly.", type: "true_false", correctAnswer: "false", options: null },
+      { category: "NATURE", value: 200, question: "This is the largest mammal in the world.", type: "specific_answer", correctAnswer: "Blue Whale", options: null },
+      { category: "NATURE", value: 300, question: "How many chambers does a human heart have?", type: "multiple_choice", correctAnswer: "C", options: ["2", "3", "4", "5"] },
+      { category: "NATURE", value: 400, question: "Sharks are mammals.", type: "true_false", correctAnswer: "false", options: null },
+      { category: "NATURE", value: 500, question: "This flower is known as the 'king of flowers'.", type: "specific_answer", correctAnswer: "Peony", options: null },
+
+      // ART
+      { category: "ART", value: 100, question: "Leonardo da Vinci painted the Mona Lisa.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "ART", value: 200, question: "This artist cut off his own ear.", type: "specific_answer", correctAnswer: "Van Gogh", options: null },
+      { category: "ART", value: 300, question: "Which museum houses the Mona Lisa?", type: "multiple_choice", correctAnswer: "B", options: ["Metropolitan Museum", "Louvre", "British Museum", "Uffizi"] },
+      { category: "ART", value: 400, question: "Pablo Picasso co-founded the Cubist movement.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "ART", value: 500, question: "This sculpture by Michelangelo depicts the biblical David.", type: "specific_answer", correctAnswer: "David", options: null },
+
+      // GENERAL
+      { category: "GENERAL", value: 100, question: "There are 365 days in a regular year.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "GENERAL", value: 200, question: "This invention allows us to see our own reflection.", type: "specific_answer", correctAnswer: "Mirror", options: null },
+      { category: "GENERAL", value: 300, question: "What is the most spoken language in the world?", type: "multiple_choice", correctAnswer: "A", options: ["Mandarin Chinese", "English", "Spanish", "Hindi"] },
+      { category: "GENERAL", value: 400, question: "The human body has 206 bones.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "GENERAL", value: 500, question: "This gas makes up about 78% of Earth's atmosphere.", type: "specific_answer", correctAnswer: "Nitrogen", options: null },
+    ];
+
+    const values = [100, 200, 300, 400, 500];
+
+    // Create questions for each category
+    for (const category of categories) {
+      for (const value of values) {
+        // Find default question for this category and value
+        const defaultQuestion = defaultQuestionsData.find(q => q.category === category && q.value === value);
+        
+        if (defaultQuestion) {
+          await this.createQuestion({
+            gameId,
+            category: defaultQuestion.category,
+            value: defaultQuestion.value,
+            question: defaultQuestion.question,
+            type: defaultQuestion.type as "multiple_choice" | "true_false" | "specific_answer",
+            correctAnswer: defaultQuestion.correctAnswer,
+            options: defaultQuestion.options,
+            isUsed: false,
+          });
+        } else {
+          // Create placeholder question if no default exists
+          await this.createQuestion({
+            gameId,
+            category,
+            value,
+            question: `${category} question for $${value}`,
+            type: "specific_answer",
+            correctAnswer: "Answer",
+            options: null,
+            isUsed: false,
+          });
+        }
+      }
+    }
   }
 
   async updateQuestion(id: string, updates: Partial<Question>): Promise<Question | undefined> {
