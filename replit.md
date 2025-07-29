@@ -103,6 +103,21 @@ The application is structured for easy development with hot reloading and clear 
 
 ## Recent Enhancements (January 2025)
 
+### Enhanced Authentication System
+- Secure role-based authentication with unique 6-character codes
+- Host code required for game control and administration
+- Player code required for game participation
+- Codes displayed in host notifications for easy sharing
+- Database persistence of authentication codes per game
+
+### Simplified Lobby Interface (July 29, 2025)
+- Removed separate "Join as Host" and "Join by Code" cards from main lobby
+- Removed global name input from top of lobby
+- Single "Setup New Game" button as primary action
+- Open games selection as main entry point for joining
+- Authentication dialog handles both host and player joining with appropriate code fields
+- Name input only appears for player role in join dialog
+
 ### Enhanced Buzz Order Tracking
 - Complete buzz order tracking (1st, 2nd, 3rd, etc.) for all players
 - Real-time buzz order display on both host and player interfaces

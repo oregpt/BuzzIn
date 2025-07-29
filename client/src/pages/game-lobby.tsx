@@ -42,30 +42,7 @@ export default function GameLobby() {
     navigate("/setup");
   };
 
-  const handleJoinAsHost = () => {
-    // Navigate to host page (for existing games)
-    navigate("/host");
-  };
 
-  const handleJoinGame = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!joinForm.roomCode.trim() || !joinForm.playerName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    sendMessage({
-      type: "join_game",
-      data: {
-        roomCode: joinForm.roomCode.toUpperCase(),
-        playerName: joinForm.playerName,
-      },
-    });
-  };
 
   const handleJoinOpenGame = (game: GameWithPlayerCount) => {
     setSelectedGame(game);
@@ -162,29 +139,14 @@ export default function GameLobby() {
           </div>
         </header>
 
-        {/* Player Name Input */}
-        <div className="max-w-md mx-auto mb-8">
-          <Label htmlFor="playerName" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">
-            Your Name (required to join games)
-          </Label>
-          <Input
-            id="playerName"
-            placeholder="Enter your name"
-            value={joinForm.playerName}
-            onChange={(e) => setJoinForm(prev => ({ ...prev, playerName: e.target.value }))}
-            className="w-full bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white"
-          />
-        </div>
-
-        {/* Main Action Cards */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
-          {/* Setup New Game */}
+        {/* Setup Game Card */}
+        <div className="max-w-md mx-auto mb-12">
           <Card className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 game-card-hover">
             <CardHeader className="text-center pb-4">
               <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center">
                 <Gamepad className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-xl font-bold text-black dark:text-white">Setup Game</CardTitle>
+              <CardTitle className="text-xl font-bold text-black dark:text-white">Setup New Game</CardTitle>
               <p className="text-gray-600 dark:text-gray-400 text-sm">Create a new trivia game with custom questions</p>
             </CardHeader>
             <CardContent>
@@ -195,58 +157,6 @@ export default function GameLobby() {
                 <Gamepad className="mr-2" />
                 Setup Game
               </Button>
-            </CardContent>
-          </Card>
-
-          {/* Join as Host */}
-          <Card className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 game-card-hover">
-            <CardHeader className="text-center pb-4">
-              <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <CardTitle className="text-xl font-bold text-black dark:text-white">Join as Host</CardTitle>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Host an existing game session</p>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={handleJoinAsHost}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
-              >
-                <Users className="mr-2" />
-                Join as Host
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Join by Room Code */}
-          <Card className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 game-card-hover">
-            <CardHeader className="text-center pb-4">
-              <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
-                <LogIn className="w-8 h-8 text-white" />
-              </div>
-              <CardTitle className="text-xl font-bold text-black dark:text-white">Join by Code</CardTitle>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Enter a room code to join a game</p>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleJoinGame} className="space-y-4">
-                <Input
-                  type="text"
-                  placeholder="ABCD"
-                  maxLength={4}
-                  value={joinForm.roomCode}
-                  onChange={(e) =>
-                    setJoinForm({ ...joinForm, roomCode: e.target.value.toUpperCase() })
-                  }
-                  className="w-full text-center text-2xl font-game tracking-widest uppercase bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                />
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-gray-900 font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
-                >
-                  <LogIn className="mr-2" />
-                  Join Game
-                </Button>
-              </form>
             </CardContent>
           </Card>
         </div>
@@ -368,6 +278,22 @@ export default function GameLobby() {
               </Button>
             </div>
 
+            {/* Player Name Input (only for player role) */}
+            {joinType === 'player' && (
+              <div className="space-y-2">
+                <Label htmlFor="dialogPlayerName" className="text-sm font-medium">
+                  Your Name
+                </Label>
+                <Input
+                  id="dialogPlayerName"
+                  placeholder="Enter your name"
+                  value={joinForm.playerName}
+                  onChange={(e) => setJoinForm(prev => ({ ...prev, playerName: e.target.value }))}
+                  className="w-full"
+                />
+              </div>
+            )}
+
             {/* Auth Code Input */}
             <div className="space-y-2">
               <Label htmlFor="authCode" className="text-sm font-medium">
@@ -388,14 +314,6 @@ export default function GameLobby() {
                 }
               </p>
             </div>
-
-            {joinType === 'player' && !joinForm.playerName.trim() && (
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  Please enter your name above to join as a player.
-                </p>
-              </div>
-            )}
           </div>
           
           <DialogFooter>
