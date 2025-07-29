@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,26 +26,11 @@ interface GameSetup {
   questions: Question[];
 }
 
-export default function GameSetup() {
+export default function GameSetupSimple() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   
-  const [step, setStep] = useState<'basic' | 'codes' | 'categories' | 'questions' | 'complete'>('basic');
-
-  // Load basic info from localStorage if available
-  React.useEffect(() => {
-    const basicInfo = localStorage.getItem('basicGameInfo');
-    if (basicInfo) {
-      const parsed = JSON.parse(basicInfo);
-      setGameSetup(prev => ({
-        ...prev,
-        gameName: parsed.gameName,
-        hostName: parsed.hostName
-      }));
-      setStep('basic'); // Start at basic step to show the flow properly
-      localStorage.removeItem('basicGameInfo');
-    }
-  }, []);
+  const [step, setStep] = useState<'basic' | 'codes' | 'categories' | 'questions'>('basic');
   const [gameSetup, setGameSetup] = useState<GameSetup>({
     gameName: "",
     hostName: "",
@@ -64,6 +48,20 @@ export default function GameSetup() {
     correctAnswer: "",
     options: null
   });
+
+  // Load basic info from localStorage if available
+  React.useEffect(() => {
+    const basicInfo = localStorage.getItem('basicGameInfo');
+    if (basicInfo) {
+      const parsed = JSON.parse(basicInfo);
+      setGameSetup(prev => ({
+        ...prev,
+        gameName: parsed.gameName,
+        hostName: parsed.hostName
+      }));
+      localStorage.removeItem('basicGameInfo');
+    }
+  }, []);
 
   const generateCode = (length: number) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -84,7 +82,6 @@ export default function GameSetup() {
       });
       return;
     }
-    console.log('Moving to codes step');
     setStep('codes');
   };
 
@@ -95,7 +92,6 @@ export default function GameSetup() {
       roomCode: prev.roomCode || generateCode(4),
       adminCode: prev.adminCode || generateCode(6)
     }));
-    console.log('Moving to categories step');
     setStep('categories');
   };
 
@@ -157,25 +153,21 @@ export default function GameSetup() {
   };
 
   const completeSetup = () => {
-    // Save the complete game setup to localStorage for the host page to use
     localStorage.setItem('gameSetup', JSON.stringify(gameSetup));
-    
-    // Also save individual items for the old WebSocket flow compatibility
     localStorage.setItem('roomCode', gameSetup.roomCode);
     localStorage.setItem('adminCode', gameSetup.adminCode);
     localStorage.setItem('hostName', gameSetup.hostName);
     localStorage.setItem('gameName', gameSetup.gameName);
-    
     navigate('/host');
   };
 
   const values = [100, 200, 300, 400, 500];
 
   return (
-    <div className="min-h-screen bg-game-dark text-gray-100">
+    <div className="min-h-screen bg-gray-900 text-gray-100">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <header className="text-center mb-8">
-          <h1 className="font-game text-4xl font-bold text-game-secondary mb-2">
+          <h1 className="font-game text-4xl font-bold text-yellow-400 mb-2">
             Game Setup
           </h1>
           <p className="text-gray-300">Configure your trivia game</p>
@@ -187,9 +179,9 @@ export default function GameSetup() {
                 key={stepName}
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                   step === stepName
-                    ? 'bg-game-primary text-white'
+                    ? 'bg-blue-600 text-white'
                     : ['basic', 'codes', 'categories', 'questions'].indexOf(step) > index
-                    ? 'bg-game-accent text-game-dark'
+                    ? 'bg-green-600 text-white'
                     : 'bg-gray-600 text-gray-300'
                 }`}
               >
@@ -210,9 +202,9 @@ export default function GameSetup() {
 
         {/* Step 1: Basic Information */}
         {step === 'basic' && (
-          <Card className="bg-game-surface border-border-game-gray">
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
-              <CardTitle className="flex items-center text-2xl">
+              <CardTitle className="flex items-center text-2xl text-white">
                 <Settings className="mr-3" />
                 Basic Information
               </CardTitle>
@@ -221,25 +213,23 @@ export default function GameSetup() {
               <form onSubmit={handleBasicInfo} className="space-y-6">
                 <div>
                   <Label className="text-gray-300 mb-2 block">Game Name</Label>
-                  <Input
+                  <input
                     value={gameSetup.gameName}
                     onChange={(e) => setGameSetup(prev => ({ ...prev, gameName: e.target.value }))}
                     placeholder="Friday Night Trivia"
-                    className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
-                    style={{ color: 'white' }}
+                    className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <Label className="text-gray-300 mb-2 block">Host Name</Label>
-                  <Input
+                  <input
                     value={gameSetup.hostName}
                     onChange={(e) => setGameSetup(prev => ({ ...prev, hostName: e.target.value }))}
                     placeholder="Your Name"
-                    className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
-                    style={{ color: 'white' }}
+                    className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <Button type="submit" className="w-full bg-game-primary hover:bg-blue-700">
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                   <ArrowRight className="mr-2 h-4 w-4" />
                   Continue to Access Codes
                 </Button>
@@ -250,27 +240,27 @@ export default function GameSetup() {
 
         {/* Step 2: Access Codes */}
         {step === 'codes' && (
-          <Card className="bg-game-surface border-border-game-gray">
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
-              <CardTitle className="text-2xl">Access Codes</CardTitle>
+              <CardTitle className="text-2xl text-white">Access Codes</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCodes} className="space-y-6">
                 <div>
                   <Label className="text-gray-300 mb-2 block">Room Code (4 letters for players)</Label>
                   <div className="flex gap-2">
-                    <Input
+                    <input
                       value={gameSetup.roomCode}
                       onChange={(e) => setGameSetup(prev => ({ ...prev, roomCode: e.target.value.toUpperCase() }))}
                       placeholder="ABCD"
                       maxLength={4}
-                      className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 font-game text-2xl text-center tracking-widest focus:ring-2 focus:ring-game-primary input-white-text"
-                      style={{ color: 'white' }}
+                      className="flex-1 p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 font-game text-2xl text-center tracking-widest rounded focus:ring-2 focus:ring-blue-500"
                     />
                     <Button 
                       type="button" 
                       onClick={() => setGameSetup(prev => ({ ...prev, roomCode: generateCode(4) }))}
                       variant="outline"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700"
                     >
                       Generate
                     </Button>
@@ -279,24 +269,24 @@ export default function GameSetup() {
                 <div>
                   <Label className="text-gray-300 mb-2 block">Admin Code (6 characters for host control)</Label>
                   <div className="flex gap-2">
-                    <Input
+                    <input
                       value={gameSetup.adminCode}
                       onChange={(e) => setGameSetup(prev => ({ ...prev, adminCode: e.target.value.toUpperCase() }))}
                       placeholder="ABC123"
                       maxLength={6}
-                      className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 font-mono text-lg text-center tracking-wider focus:ring-2 focus:ring-game-primary input-white-text"
-                      style={{ color: 'white' }}
+                      className="flex-1 p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 font-mono text-lg text-center tracking-wider rounded focus:ring-2 focus:ring-blue-500"
                     />
                     <Button 
                       type="button" 
                       onClick={() => setGameSetup(prev => ({ ...prev, adminCode: generateCode(6) }))}
                       variant="outline"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700"
                     >
                       Generate
                     </Button>
                   </div>
                 </div>
-                <Button type="submit" className="w-full bg-game-primary hover:bg-blue-700">
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                   <ArrowRight className="mr-2 h-4 w-4" />
                   Continue to Categories
                 </Button>
@@ -307,15 +297,15 @@ export default function GameSetup() {
 
         {/* Step 3: Categories */}
         {step === 'categories' && (
-          <Card className="bg-game-surface border-border-game-gray">
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
-              <CardTitle className="text-2xl">Game Categories</CardTitle>
+              <CardTitle className="text-2xl text-white">Game Categories</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {gameSetup.categories.map((category, index) => (
-                    <div key={index} className="flex items-center justify-between bg-game-dark p-3 rounded">
+                    <div key={index} className="flex items-center justify-between bg-gray-700 p-3 rounded">
                       <span className="text-white">{category}</span>
                       <Button
                         size="sm"
@@ -327,13 +317,13 @@ export default function GameSetup() {
                     </div>
                   ))}
                 </div>
-                <Button onClick={addCategory} variant="outline" className="w-full">
+                <Button onClick={addCategory} variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Category
                 </Button>
                 <Button 
                   onClick={() => setStep('questions')} 
-                  className="w-full bg-game-primary hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <ArrowRight className="mr-2 h-4 w-4" />
                   Continue to Questions
@@ -346,9 +336,9 @@ export default function GameSetup() {
         {/* Step 4: Questions */}
         {step === 'questions' && (
           <div className="space-y-6">
-            <Card className="bg-game-surface border-border-game-gray">
+            <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-2xl">Add Questions</CardTitle>
+                <CardTitle className="text-2xl text-white">Add Questions</CardTitle>
                 <p className="text-gray-400">
                   Current questions: {gameSetup.questions.length} | 
                   Target: {gameSetup.categories.length * 5} questions
@@ -362,7 +352,7 @@ export default function GameSetup() {
                       <select
                         value={currentQuestion.category}
                         onChange={(e) => setCurrentQuestion(prev => ({ ...prev, category: e.target.value }))}
-                        className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded focus:ring-2 focus:ring-game-primary"
+                        className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
                       >
                         {gameSetup.categories.map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
@@ -374,7 +364,7 @@ export default function GameSetup() {
                       <select
                         value={currentQuestion.value}
                         onChange={(e) => setCurrentQuestion(prev => ({ ...prev, value: parseInt(e.target.value) }))}
-                        className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded focus:ring-2 focus:ring-game-primary"
+                        className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
                       >
                         {values.map(val => (
                           <option key={val} value={val}>${val}</option>
@@ -385,12 +375,11 @@ export default function GameSetup() {
                   
                   <div>
                     <Label className="text-gray-300 mb-2 block">Question</Label>
-                    <Textarea
-                      value={currentQuestion.question}
+                    <textarea
+                      value={currentQuestion.question || ''}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, question: e.target.value }))}
                       placeholder="Enter your question here..."
-                      className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
-                      style={{ color: 'white' }}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
                       rows={3}
                     />
                   </div>
@@ -400,7 +389,7 @@ export default function GameSetup() {
                     <select
                       value={currentQuestion.type}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, type: e.target.value as any }))}
-                      className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded focus:ring-2 focus:ring-game-primary"
+                      className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="specific_answer">Specific Answer</option>
                       <option value="true_false">True/False</option>
@@ -410,16 +399,15 @@ export default function GameSetup() {
 
                   <div>
                     <Label className="text-gray-300 mb-2 block">Correct Answer</Label>
-                    <Input
-                      value={currentQuestion.correctAnswer}
+                    <input
+                      value={currentQuestion.correctAnswer || ''}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
                       placeholder="Enter the correct answer"
-                      className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
-                      style={{ color: 'white' }}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
-                  <Button onClick={addQuestion} className="w-full bg-game-accent hover:bg-green-700">
+                  <Button onClick={addQuestion} className="w-full bg-green-600 hover:bg-green-700 text-white">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Question
                   </Button>
@@ -428,14 +416,14 @@ export default function GameSetup() {
             </Card>
 
             {gameSetup.questions.length >= gameSetup.categories.length * 3 && (
-              <Card className="bg-game-primary border-border-game-gray">
+              <Card className="bg-blue-800 border-blue-700">
                 <CardContent className="pt-6">
                   <div className="text-center">
                     <h3 className="text-xl font-bold text-white mb-2">Ready to Start!</h3>
-                    <p className="text-gray-200 mb-4">
+                    <p className="text-blue-200 mb-4">
                       You have {gameSetup.questions.length} questions. You can start the game now or add more questions.
                     </p>
-                    <Button onClick={completeSetup} className="bg-white text-game-primary hover:bg-gray-100">
+                    <Button onClick={completeSetup} className="bg-white text-blue-800 hover:bg-gray-100">
                       <Save className="mr-2 h-4 w-4" />
                       Start Game
                     </Button>
