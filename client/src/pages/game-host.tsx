@@ -130,14 +130,13 @@ export default function GameHost() {
   onMessage("question_selected", (data) => {
     console.log('Question selected:', data);
     if (data.question) {
-      const questionKey = `${data.question.category}-${data.question.value}`;
       setGameState(prev => ({
         ...prev,
         currentQuestion: data.question,
         buzzerResults: [],
         submittedAnswers: [],
         selectedBy: data.selectedBy || null,
-        usedQuestions: new Set([...prev.usedQuestions, questionKey])
+        // Don't automatically mark as used - only when explicitly marked
       }));
       setShowQuestion(true);
       setShowAnswer(false); // Reset answer visibility for new question
@@ -183,15 +182,12 @@ export default function GameHost() {
   });
 
   onMessage("question_closed", (data) => {
-    if (gameState.currentQuestion) {
-      const questionKey = `${gameState.currentQuestion.category}-${gameState.currentQuestion.value}`;
-      setGameState(prev => ({
-        ...prev,
-        currentQuestion: null,
-        usedQuestions: new Set(Array.from(prev.usedQuestions).concat([questionKey])),
-        nextPicker: data.nextPicker || null,
-      }));
-    }
+    setGameState(prev => ({
+      ...prev,
+      currentQuestion: null,
+      nextPicker: data.nextPicker || null,
+      // Don't automatically add to usedQuestions here - only when explicitly marked
+    }));
     setShowQuestion(false);
     setShowAnswer(false); // Reset answer visibility when question closes
   });
@@ -233,7 +229,15 @@ export default function GameHost() {
   };
 
   const handleMarkUsed = () => {
-    // Mark the question as used and close
+    // Mark the question as used in local state first
+    if (gameState.currentQuestion) {
+      const questionKey = `${gameState.currentQuestion.category}-${gameState.currentQuestion.value}`;
+      setGameState(prev => ({
+        ...prev,
+        usedQuestions: new Set([...prev.usedQuestions, questionKey])
+      }));
+    }
+    // Then close the question
     handleCloseQuestion();
   };
 
