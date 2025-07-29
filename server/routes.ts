@@ -60,8 +60,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
               currentQuestionId: null,
             });
 
-            // Initialize default questions for this game
-            await storage.initializeDefaultQuestions(game.id, game.categories as string[]);
+            // Check if we have custom questions from setup
+            const gameSetupStr = message.data.gameSetup;
+            if (gameSetupStr) {
+              try {
+                const gameSetup = JSON.parse(gameSetupStr);
+                if (gameSetup.questions && gameSetup.questions.length > 0) {
+                  // Create custom questions from the setup
+                  for (const q of gameSetup.questions) {
+                    await storage.createQuestion({
+                      gameId: game.id,
+                      category: q.category,
+                      value: q.value,
+                      question: q.question,
+                      type: q.type,
+                      correctAnswer: q.correctAnswer,
+                      options: q.options,
+                      isUsed: false
+                    });
+                  }
+                } else {
+                  // Initialize default questions for this game
+                  await storage.initializeDefaultQuestions(game.id, game.categories as string[]);
+                }
+              } catch (e) {
+                // If setup parsing fails, use default questions
+                await storage.initializeDefaultQuestions(game.id, game.categories as string[]);
+              }
+            } else {
+              // Initialize default questions for this game
+              await storage.initializeDefaultQuestions(game.id, game.categories as string[]);
+            }
 
             const host = await storage.createPlayer({
               gameId: game.id,
@@ -138,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { category, value, selectedBy } = message.data;
             if (!ws.gameId) break;
 
-            const questions = await storage.getAllQuestions();
+            const questions = await storage.getQuestionsByGameId(ws.gameId);
             const question = questions.find(q => 
               q.category === category && 
               q.value === value && 

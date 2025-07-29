@@ -108,7 +108,7 @@ export type GameAnswer = typeof gameAnswers.$inferSelect;
 // WebSocket message types
 export type WSMessage = 
   | { type: "join_game"; data: { roomCode: string; playerName: string } }
-  | { type: "create_game"; data: { gameName: string; hostName: string; categories?: string[] } }
+  | { type: "create_game"; data: { gameName: string; hostName: string; categories?: string[]; gameSetup?: string } }
   | { type: "select_question"; data: { category: string; value: number; selectedBy?: string } }
   | { type: "buzz"; data: { questionId: string } }
   | { type: "submit_answer"; data: { questionId: string; answer: string } }

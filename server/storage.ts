@@ -232,8 +232,23 @@ export class MemStorage implements IStorage {
   }
 
   async initializeDefaultQuestions(gameId: string, categories: string[]): Promise<void> {
-    // MemStorage doesn't need this method as it initializes questions globally
-    // This is a no-op for backward compatibility
+    // Create default questions for the specified categories and values
+    const values = [100, 200, 300, 400, 500];
+    
+    for (const category of categories) {
+      for (const value of values) {
+        await this.createQuestion({
+          gameId,
+          category,
+          value,
+          question: `Sample ${category} question for $${value}`,
+          type: 'specific_answer',
+          correctAnswer: 'Sample answer',
+          options: null,
+          isUsed: false
+        });
+      }
+    }
   }
 
   async updateQuestion(id: string, updates: Partial<Question>): Promise<Question | undefined> {

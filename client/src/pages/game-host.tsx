@@ -58,13 +58,14 @@ export default function GameHost() {
     if (gameSetup) {
       const setup = JSON.parse(gameSetup);
       
-      // Create game with custom categories via WebSocket
+      // Create game with custom categories and questions via WebSocket
       sendMessage({
         type: "create_game",
         data: {
           gameName: setup.gameName,
           hostName: setup.hostName,
-          categories: setup.categories
+          categories: setup.categories,
+          gameSetup: JSON.stringify(setup)
         }
       });
       
@@ -219,38 +220,38 @@ export default function GameHost() {
   const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="min-h-screen bg-game-dark text-gray-100">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Game Header */}
-        <Card className="bg-game-surface border-border-game-gray mb-6">
+        <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
               <div className="flex items-center">
-                <h1 className="font-game text-3xl font-bold text-game-secondary mr-6">
+                <h1 className="font-game text-3xl font-bold text-blue-600 dark:text-yellow-400 mr-6">
                   ROOM: {gameState.roomCode}
                 </h1>
-                <div className="flex items-center text-game-accent">
+                <div className="flex items-center text-gray-600 dark:text-gray-300">
                   <Users className="mr-2" />
                   <span>{gameState.players.length} Players</span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 {gameState.nextPicker && (
-                  <div className="bg-game-accent px-4 py-2 rounded-lg">
-                    <span className="text-sm text-game-dark">Next Picker:</span>
-                    <span className="ml-2 font-bold text-game-dark">{gameState.nextPicker.playerName}</span>
+                  <div className="bg-blue-600 dark:bg-yellow-400 px-4 py-2 rounded-lg">
+                    <span className="text-sm text-white dark:text-black">Next Picker:</span>
+                    <span className="ml-2 font-bold text-white dark:text-black">{gameState.nextPicker.playerName}</span>
                   </div>
                 )}
                 {firstBuzzer && (
-                  <div className="bg-game-primary px-4 py-2 rounded-lg">
-                    <span className="text-sm text-gray-300">Current Turn:</span>
+                  <div className="bg-green-600 dark:bg-green-500 px-4 py-2 rounded-lg">
+                    <span className="text-sm text-white">Current Turn:</span>
                     <span className="ml-2 font-bold text-white">{firstBuzzer.playerName}</span>
                   </div>
                 )}
                 <Button
                   onClick={handleEndGame}
                   variant="destructive"
-                  className="bg-game-danger hover:bg-red-600"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <Square className="mr-2 h-4 w-4" />
                   End Game
@@ -261,14 +262,14 @@ export default function GameHost() {
         </Card>
 
         {/* Game Board Grid */}
-        <Card className="bg-game-surface border-border-game-gray mb-6">
+        <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 mb-6">
           <CardContent className="pt-6">
             <div className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}>
               {/* Category Headers */}
               {gameState.categories.map(category => (
                 <div
                   key={category}
-                  className="bg-game-primary text-white p-4 rounded-lg text-center font-bold text-sm md:text-base"
+                  className="bg-blue-600 dark:bg-gray-800 text-white p-4 rounded-lg text-center font-bold text-sm md:text-base"
                 >
                   {category}
                 </div>
@@ -288,8 +289,8 @@ export default function GameHost() {
                       className={`
                         font-game font-bold text-2xl md:text-3xl p-6 rounded-lg min-h-[80px] flex items-center justify-center
                         ${isUsed 
-                          ? 'bg-gray-800 text-gray-500 opacity-50 cursor-not-allowed' 
-                          : 'bg-game-secondary text-game-dark hover:bg-yellow-400 transition-all duration-200 game-card-hover'
+                          ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 opacity-50 cursor-not-allowed' 
+                          : 'bg-yellow-400 dark:bg-yellow-500 text-black hover:bg-yellow-500 dark:hover:bg-yellow-400 transition-all duration-200'
                         }
                       `}
                     >
@@ -303,25 +304,25 @@ export default function GameHost() {
         </Card>
 
         {/* Scoreboard */}
-        <Card className="bg-game-surface border-border-game-gray">
+        <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
           <CardHeader>
-            <CardTitle className="flex items-center text-xl font-bold text-white">
-              <Trophy className="text-game-secondary mr-2" />
+            <CardTitle className="flex items-center text-xl font-bold text-black dark:text-white">
+              <Trophy className="text-yellow-500 mr-2" />
               Scoreboard
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               {sortedPlayers.map(player => (
-                <div key={player.id} className="bg-game-dark p-4 rounded-lg border border-gray-600">
+                <div key={player.id} className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-600">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-white">{player.name}</span>
-                    <span className="font-game text-xl font-bold text-game-accent">
+                    <span className="font-medium text-black dark:text-white">{player.name}</span>
+                    <span className="font-game text-xl font-bold text-green-600 dark:text-green-400">
                       {formatCurrency(player.score)}
                     </span>
                   </div>
                   {player.isHost && (
-                    <div className="text-sm text-game-secondary mt-1">Host</div>
+                    <div className="text-sm text-blue-600 dark:text-yellow-400 mt-1">Host</div>
                   )}
                 </div>
               ))}
@@ -332,35 +333,37 @@ export default function GameHost() {
 
       {/* Question View Modal */}
       {showQuestion && gameState.currentQuestion && (
-        <div className="fixed inset-0 bg-game-dark bg-opacity-95 z-50 flex items-center justify-center p-4">
-          <Card className="bg-game-surface border-border-game-gray max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4">
+          <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <CardContent className="pt-8">
               {/* Question Header */}
               <div className="text-center mb-8">
-                <div className="text-game-secondary font-game text-2xl font-bold mb-2">
+                <div className="text-blue-600 dark:text-yellow-400 font-game text-2xl font-bold mb-2">
                   {gameState.currentQuestion.category} - {formatCurrency(gameState.currentQuestion.value)}
                 </div>
-{gameState.selectedBy && (
-                  <div className="text-gray-400 text-sm mb-4">
+                {gameState.selectedBy && (
+                  <div className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                     Selected by {gameState.selectedBy}
                   </div>
                 )}
-                <div className="text-white text-3xl md:text-4xl font-bold leading-tight">
+                <div className="text-black dark:text-white text-3xl md:text-4xl font-bold leading-tight">
                   {gameState.currentQuestion.question}
                 </div>
               </div>
 
               {/* Buzz Order Display */}
               {gameState.buzzerResults.length > 0 && (
-                <Card className="bg-game-primary mb-8">
+                <Card className="bg-blue-50 dark:bg-gray-800 border-blue-200 dark:border-gray-600 mb-8">
                   <CardContent className="pt-6">
-                    <div className="text-white text-lg mb-4 text-center">Buzz Order:</div>
+                    <div className="text-black dark:text-white text-lg mb-4 text-center">Buzz Order:</div>
                     <div className="space-y-2">
                       {gameState.buzzerResults.map((buzz, index) => (
                         <div 
                           key={buzz.playerId}
                           className={`flex items-center justify-between p-3 rounded-lg ${
-                            buzz.isFirst ? 'bg-game-accent text-game-dark' : 'bg-game-dark text-white'
+                            buzz.isFirst 
+                              ? 'bg-yellow-400 dark:bg-yellow-500 text-black' 
+                              : 'bg-gray-200 dark:bg-gray-700 text-black dark:text-white'
                           }`}
                         >
                           <div className="flex items-center">
@@ -384,12 +387,12 @@ export default function GameHost() {
                   {(gameState.currentQuestion.options as string[]).map((option: string, index: number) => (
                     <div
                       key={index}
-                      className="w-full bg-game-dark p-4 rounded-lg border border-gray-600"
+                      className="w-full bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-600"
                     >
-                      <span className="font-bold text-game-secondary mr-3">
+                      <span className="font-bold text-blue-600 dark:text-yellow-400 mr-3">
                         {String.fromCharCode(65 + index)}.
                       </span>
-                      <span className="text-white">{option}</span>
+                      <span className="text-black dark:text-white">{option}</span>
                     </div>
                   ))}
                 </div>
@@ -397,10 +400,10 @@ export default function GameHost() {
 
               {gameState.currentQuestion.type === 'true_false' && (
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-game-accent p-6 rounded-lg text-white font-bold text-xl text-center">
+                  <div className="bg-green-600 dark:bg-green-500 p-6 rounded-lg text-white font-bold text-xl text-center">
                     <Check className="inline mr-2" />TRUE
                   </div>
-                  <div className="bg-game-danger p-6 rounded-lg text-white font-bold text-xl text-center">
+                  <div className="bg-red-600 dark:bg-red-500 p-6 rounded-lg text-white font-bold text-xl text-center">
                     <X className="inline mr-2" />FALSE
                   </div>
                 </div>
@@ -409,13 +412,13 @@ export default function GameHost() {
               {/* Submitted Answers */}
               {gameState.submittedAnswers.length > 0 && (
                 <div className="mb-8">
-                  <h3 className="text-lg font-bold text-white mb-4">Submitted Answers:</h3>
+                  <h3 className="text-lg font-bold text-black dark:text-white mb-4">Submitted Answers:</h3>
                   {gameState.submittedAnswers.map((answer, index) => (
-                    <Card key={index} className="bg-game-dark mb-2">
+                    <Card key={index} className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 mb-2">
                       <CardContent className="pt-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-game-secondary font-bold">{answer.playerName}:</span>
-                          <span className="text-white">{answer.answer}</span>
+                          <span className="text-blue-600 dark:text-yellow-400 font-bold">{answer.playerName}:</span>
+                          <span className="text-black dark:text-white">{answer.answer}</span>
                         </div>
                       </CardContent>
                     </Card>
@@ -429,21 +432,21 @@ export default function GameHost() {
                   <>
                     <Button
                       onClick={() => handleMarkAnswer(firstBuzzer.playerId, true)}
-                      className="bg-game-accent hover:bg-green-600 text-white font-bold"
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold"
                     >
                       <Check className="mr-2" />
                       Correct (+{formatCurrency(gameState.currentQuestion.value)})
                     </Button>
                     <Button
                       onClick={() => handleMarkAnswer(firstBuzzer.playerId, false)}
-                      className="bg-game-danger hover:bg-red-600 text-white font-bold"
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold"
                     >
                       <X className="mr-2" />
                       Incorrect (-{formatCurrency(gameState.currentQuestion.value)})
                     </Button>
                     <Button
                       onClick={() => handleMarkAnswer(firstBuzzer.playerId, false, true)}
-                      className="bg-game-secondary hover:bg-yellow-500 text-game-dark font-bold"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
                     >
                       <Star className="mr-2" />
                       Accept Close Answer
@@ -453,7 +456,7 @@ export default function GameHost() {
                 <Button
                   onClick={handleCloseQuestion}
                   variant="secondary"
-                  className="bg-gray-600 hover:bg-gray-500 text-white font-bold"
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-bold"
                 >
                   <ArrowLeft className="mr-2" />
                   Back to Board
