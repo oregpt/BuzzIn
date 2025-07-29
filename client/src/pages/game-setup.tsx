@@ -223,7 +223,8 @@ export default function GameSetup() {
                     value={gameSetup.gameName}
                     onChange={(e) => setGameSetup(prev => ({ ...prev, gameName: e.target.value }))}
                     placeholder="Friday Night Trivia"
-                    className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400"
+                    className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
+                    style={{ color: 'white' }}
                   />
                 </div>
                 <div>
@@ -232,7 +233,8 @@ export default function GameSetup() {
                     value={gameSetup.hostName}
                     onChange={(e) => setGameSetup(prev => ({ ...prev, hostName: e.target.value }))}
                     placeholder="Your Name"
-                    className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400"
+                    className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
+                    style={{ color: 'white' }}
                   />
                 </div>
                 <Button type="submit" className="w-full bg-game-primary hover:bg-blue-700">
@@ -260,7 +262,8 @@ export default function GameSetup() {
                       onChange={(e) => setGameSetup(prev => ({ ...prev, roomCode: e.target.value.toUpperCase() }))}
                       placeholder="ABCD"
                       maxLength={4}
-                      className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400 font-game text-2xl text-center tracking-widest"
+                      className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 font-game text-2xl text-center tracking-widest focus:ring-2 focus:ring-game-primary input-white-text"
+                      style={{ color: 'white' }}
                     />
                     <Button 
                       type="button" 
@@ -279,7 +282,8 @@ export default function GameSetup() {
                       onChange={(e) => setGameSetup(prev => ({ ...prev, adminCode: e.target.value.toUpperCase() }))}
                       placeholder="ABC123"
                       maxLength={6}
-                      className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400 font-mono text-lg text-center tracking-wider"
+                      className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 font-mono text-lg text-center tracking-wider focus:ring-2 focus:ring-game-primary input-white-text"
+                      style={{ color: 'white' }}
                     />
                     <Button 
                       type="button" 
@@ -356,7 +360,7 @@ export default function GameSetup() {
                       <select
                         value={currentQuestion.category}
                         onChange={(e) => setCurrentQuestion(prev => ({ ...prev, category: e.target.value }))}
-                        className="w-full p-3 bg-game-dark border border-border-game-gray text-white rounded"
+                        className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded focus:ring-2 focus:ring-game-primary"
                       >
                         {gameSetup.categories.map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
@@ -368,7 +372,7 @@ export default function GameSetup() {
                       <select
                         value={currentQuestion.value}
                         onChange={(e) => setCurrentQuestion(prev => ({ ...prev, value: parseInt(e.target.value) }))}
-                        className="w-full p-3 bg-game-dark border border-border-game-gray text-white rounded"
+                        className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded focus:ring-2 focus:ring-game-primary"
                       >
                         {values.map(val => (
                           <option key={val} value={val}>${val}</option>
@@ -383,7 +387,8 @@ export default function GameSetup() {
                       value={currentQuestion.question}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, question: e.target.value }))}
                       placeholder="Enter your question here..."
-                      className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400"
+                      className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
+                      style={{ color: 'white' }}
                       rows={3}
                     />
                   </div>
@@ -393,7 +398,7 @@ export default function GameSetup() {
                     <select
                       value={currentQuestion.type}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, type: e.target.value as any }))}
-                      className="w-full p-3 bg-game-dark border border-border-game-gray text-white rounded"
+                      className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded focus:ring-2 focus:ring-game-primary"
                     >
                       <option value="specific_answer">Specific Answer</option>
                       <option value="true_false">True/False</option>
@@ -407,7 +412,8 @@ export default function GameSetup() {
                       value={currentQuestion.correctAnswer}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
                       placeholder="Enter the correct answer"
-                      className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400"
+                      className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
+                      style={{ color: 'white' }}
                     />
                   </div>
 

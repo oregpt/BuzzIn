@@ -130,6 +130,31 @@
   color: hsl(var(--game-secondary));
 }
 
+.text-game-primary {
+  color: hsl(var(--game-primary));
+}
+
+.text-game-dark {
+  color: hsl(var(--game-dark));
+}
+
+.border-border-game-gray {
+  border-color: hsl(240, 3.7%, 25%);
+}
+
+/* Force text color for input fields */
+.input-white-text input {
+  color: white !important;
+}
+
+.input-white-text textarea {
+  color: white !important;
+}
+
+.text-game-secondary {
+  color: hsl(var(--game-secondary));
+}
+
 .text-game-accent {
   color: hsl(var(--game-accent));
 }
