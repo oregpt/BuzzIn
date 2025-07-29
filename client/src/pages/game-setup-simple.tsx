@@ -47,6 +47,7 @@ export default function GameSetupSimple() {
 
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{ index: number; name: string } | null>(null);
 
   // No need to load basic info from localStorage since we removed the pre-form
 
@@ -90,6 +91,31 @@ export default function GameSetupSimple() {
         categories: [...prev.categories, newCategory.trim().toUpperCase()]
       }));
     }
+  };
+
+  const editCategory = (index: number, newName: string) => {
+    const oldName = gameSetup.categories[index];
+    const updatedName = newName.trim().toUpperCase();
+    
+    if (!updatedName || updatedName === oldName) {
+      setEditingCategory(null);
+      return;
+    }
+
+    setGameSetup(prev => ({
+      ...prev,
+      categories: prev.categories.map((cat, i) => i === index ? updatedName : cat),
+      // Update questions to use the new category name
+      questions: prev.questions.map(q => 
+        q.category === oldName ? { ...q, category: updatedName } : q
+      )
+    }));
+    
+    setEditingCategory(null);
+    toast({
+      title: "Category Updated",
+      description: `Changed ${oldName} to ${updatedName}`,
+    });
   };
 
   const removeCategory = (index: number) => {
@@ -312,12 +338,33 @@ export default function GameSetupSimple() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {gameSetup.categories.map((category, index) => (
                     <div key={index} className="flex items-center justify-between bg-gray-700 p-3 rounded">
-                      <span className="text-white">{category}</span>
+                      {editingCategory?.index === index ? (
+                        <input
+                          type="text"
+                          value={editingCategory.name}
+                          onChange={(e) => setEditingCategory({ index, name: e.target.value })}
+                          onBlur={() => editCategory(index, editingCategory.name)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') editCategory(index, editingCategory.name);
+                            if (e.key === 'Escape') setEditingCategory(null);
+                          }}
+                          className="bg-gray-600 text-white px-2 py-1 rounded flex-1 mr-2"
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className="text-white cursor-pointer hover:text-blue-300 flex-1"
+                          onClick={() => setEditingCategory({ index, name: category })}
+                          title="Click to edit category name"
+                        >
+                          {category}
+                        </span>
+                      )}
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => removeCategory(index)}
-                        className="text-red-400 hover:text-white hover:bg-red-600"
+                        className="text-red-400 hover:text-white hover:bg-red-600 ml-2"
                       >
                         ×
                       </Button>
@@ -356,16 +403,63 @@ export default function GameSetupSimple() {
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="text-2xl text-white text-center">Question Board</CardTitle>
-                <p className="text-gray-400 text-center">
-                  Click on a tile to create a question | {gameSetup.questions.length} questions created
+                <p className="text-gray-400 text-center text-sm">
+                  Click tiles to edit questions | {gameSetup.questions.length} of {gameSetup.categories.length * 5} questions created
                 </p>
+                <div className="flex justify-center gap-4 text-xs text-gray-500 mt-2">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-blue-600 rounded border border-blue-400"></div>
+                    <span>Default</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-green-600 rounded"></div>
+                    <span>Edited</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-gray-600 rounded"></div>
+                    <span>Empty</span>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${gameSetup.categories.length}, minmax(0, 1fr))` }}>
                   {/* Header row with categories */}
                   {gameSetup.categories.map((category, categoryIndex) => (
-                    <div key={category} className="bg-blue-700 text-white p-3 text-center font-bold text-sm rounded">
-                      {category}
+                    <div key={category} className="bg-blue-700 text-white p-2 text-center font-bold text-xs md:text-sm rounded relative group">
+                      {editingCategory?.index === categoryIndex ? (
+                        <input
+                          type="text"
+                          value={editingCategory.name}
+                          onChange={(e) => setEditingCategory({ index: categoryIndex, name: e.target.value })}
+                          onBlur={() => editCategory(categoryIndex, editingCategory.name)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') editCategory(categoryIndex, editingCategory.name);
+                            if (e.key === 'Escape') setEditingCategory(null);
+                          }}
+                          className="bg-blue-600 text-white text-center w-full border-none outline-none text-xs md:text-sm font-bold"
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <span 
+                            className="cursor-pointer hover:text-blue-200"
+                            onClick={() => setEditingCategory({ index: categoryIndex, name: category })}
+                            title="Click to edit category"
+                          >
+                            {category}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeCategory(categoryIndex);
+                            }}
+                            className="absolute -top-1 -right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove category"
+                          >
+                            ×
+                          </button>
+                        </>
+                      )}
                     </div>
                   ))}
                   
@@ -373,7 +467,12 @@ export default function GameSetupSimple() {
                   {values.map((value) => (
                     gameSetup.categories.map((category, categoryIndex) => {
                       const existingQuestion = gameSetup.questions.find(q => q.category === category && q.value === value);
+                      const defaultQuestion = DEFAULT_QUESTIONS.find(q => q.category === category && q.value === value);
                       const hasQuestion = !!existingQuestion;
+                      const isDefault = hasQuestion && defaultQuestion && 
+                        existingQuestion.question === defaultQuestion.question && 
+                        existingQuestion.correctAnswer === defaultQuestion.correctAnswer;
+                      
                       return (
                         <button
                           key={`${category}-${value}`}
@@ -406,9 +505,12 @@ export default function GameSetupSimple() {
                           }}
                           className={`p-4 rounded font-bold text-lg transition-all duration-200 hover:scale-105 ${
                             hasQuestion 
-                              ? 'bg-green-600 text-white hover:bg-green-700' 
-                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                              ? isDefault 
+                                ? 'bg-blue-600 text-blue-100 hover:bg-blue-700 border-2 border-blue-400' 
+                                : 'bg-green-600 text-white hover:bg-green-700'
+                              : 'bg-gray-600 hover:bg-gray-700 text-gray-300'
                           }`}
+                          title={hasQuestion ? (isDefault ? 'Default question - click to edit' : 'Custom question - click to edit') : 'Click to create question'}
                         >
                           ${value}
                         </button>
