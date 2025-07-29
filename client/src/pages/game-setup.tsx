@@ -408,12 +408,45 @@ export default function GameSetup() {
                     </select>
                   </div>
 
+                  {/* Multiple Choice Options */}
+                  {currentQuestion.type === 'multiple_choice' && (
+                    <div>
+                      <Label className="text-gray-300 mb-2 block">Answer Options</Label>
+                      <div className="space-y-3">
+                        {['A', 'B', 'C', 'D'].map((letter, index) => (
+                          <div key={letter} className="flex items-center gap-3">
+                            <span className="text-gray-300 font-bold w-8">{letter}.</span>
+                            <Input
+                              value={(currentQuestion.options as string[] || ['', '', '', ''])[index] || ''}
+                              onChange={(e) => {
+                                const newOptions = [...(currentQuestion.options as string[] || ['', '', '', ''])];
+                                newOptions[index] = e.target.value;
+                                setCurrentQuestion(prev => ({ ...prev, options: newOptions }));
+                              }}
+                              placeholder={`Option ${letter}`}
+                              className="flex-1 bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
+                              style={{ color: 'white' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
-                    <Label className="text-gray-300 mb-2 block">Correct Answer</Label>
+                    <Label className="text-gray-300 mb-2 block">
+                      {currentQuestion.type === 'multiple_choice' ? 'Correct Answer (A, B, C, or D)' : 
+                       currentQuestion.type === 'true_false' ? 'Correct Answer (true or false)' : 
+                       'Correct Answer'}
+                    </Label>
                     <Input
                       value={currentQuestion.correctAnswer}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
-                      placeholder="Enter the correct answer"
+                      placeholder={
+                        currentQuestion.type === 'multiple_choice' ? 'A, B, C, or D' :
+                        currentQuestion.type === 'true_false' ? 'true or false' :
+                        'Enter the correct answer'
+                      }
                       className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-game-primary input-white-text"
                       style={{ color: 'white' }}
                     />
