@@ -10,6 +10,7 @@ export interface IStorage {
   getGameByRoomCode(roomCode: string): Promise<Game | undefined>;
   updateGame(id: string, updates: Partial<Game>): Promise<Game | undefined>;
   deleteGame(id: string): Promise<boolean>;
+  getOpenGames(): Promise<Game[]>;
 
   // Player methods
   createPlayer(player: InsertPlayer): Promise<Player>;
@@ -164,6 +165,10 @@ export class MemStorage implements IStorage {
 
   async deleteGame(id: string): Promise<boolean> {
     return this.games.delete(id);
+  }
+
+  async getOpenGames(): Promise<Game[]> {
+    return Array.from(this.games.values()).filter(game => game.status === "waiting");
   }
 
   async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
@@ -337,6 +342,10 @@ export class DatabaseStorage implements IStorage {
   async deleteGame(id: string): Promise<boolean> {
     const result = await db.delete(games).where(eq(games.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getOpenGames(): Promise<Game[]> {
+    return await db.select().from(games).where(eq(games.status, "waiting"));
   }
 
   // Player methods

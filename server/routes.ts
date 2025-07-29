@@ -391,5 +391,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // REST API endpoint for getting open games
+  app.get('/api/open-games', async (req, res) => {
+    try {
+      const openGames = await storage.getOpenGames();
+      // Include player count for each game
+      const gamesWithPlayerCounts = await Promise.all(
+        openGames.map(async (game) => {
+          const players = await storage.getPlayersByGameId(game.id);
+          return {
+            ...game,
+            playerCount: players.length
+          };
+        })
+      );
+      res.json(gamesWithPlayerCounts);
+    } catch (error) {
+      console.error('Error fetching open games:', error);
+      res.status(500).json({ error: 'Failed to fetch open games' });
+    }
+  });
+
   return httpServer;
 }
