@@ -1,5 +1,7 @@
-import { type Game, type InsertGame, type Player, type InsertPlayer, type Question, type InsertQuestion, type Buzz, type InsertBuzz, type GameAnswer, type InsertGameAnswer } from "@shared/schema";
+import { type Game, type InsertGame, type Player, type InsertPlayer, type Question, type InsertQuestion, type Buzz, type InsertBuzz, type GameAnswer, type InsertGameAnswer, games, players, questions, buzzes, gameAnswers } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // Game methods
@@ -281,4 +283,118 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  // Game methods
+  async createGame(insertGame: InsertGame): Promise<Game> {
+    const [game] = await db.insert(games).values(insertGame).returning();
+    return game;
+  }
+
+  async getGame(id: string): Promise<Game | undefined> {
+    const [game] = await db.select().from(games).where(eq(games.id, id));
+    return game || undefined;
+  }
+
+  async getGameByRoomCode(roomCode: string): Promise<Game | undefined> {
+    const [game] = await db.select().from(games).where(eq(games.roomCode, roomCode));
+    return game || undefined;
+  }
+
+  async updateGame(id: string, updates: Partial<Game>): Promise<Game | undefined> {
+    const [game] = await db.update(games).set(updates).where(eq(games.id, id)).returning();
+    return game || undefined;
+  }
+
+  async deleteGame(id: string): Promise<boolean> {
+    const result = await db.delete(games).where(eq(games.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Player methods
+  async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
+    const [player] = await db.insert(players).values(insertPlayer).returning();
+    return player;
+  }
+
+  async getPlayer(id: string): Promise<Player | undefined> {
+    const [player] = await db.select().from(players).where(eq(players.id, id));
+    return player || undefined;
+  }
+
+  async getPlayersByGameId(gameId: string): Promise<Player[]> {
+    return await db.select().from(players).where(eq(players.gameId, gameId));
+  }
+
+  async updatePlayer(id: string, updates: Partial<Player>): Promise<Player | undefined> {
+    const [player] = await db.update(players).set(updates).where(eq(players.id, id)).returning();
+    return player || undefined;
+  }
+
+  async deletePlayer(id: string): Promise<boolean> {
+    const result = await db.delete(players).where(eq(players.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Question methods
+  async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
+    const [question] = await db.insert(questions).values(insertQuestion).returning();
+    return question;
+  }
+
+  async getQuestion(id: string): Promise<Question | undefined> {
+    const [question] = await db.select().from(questions).where(eq(questions.id, id));
+    return question || undefined;
+  }
+
+  async getAllQuestions(): Promise<Question[]> {
+    return await db.select().from(questions);
+  }
+
+  async updateQuestion(id: string, updates: Partial<Question>): Promise<Question | undefined> {
+    const [question] = await db.update(questions).set(updates).where(eq(questions.id, id)).returning();
+    return question || undefined;
+  }
+
+  // Buzz methods
+  async createBuzz(insertBuzz: InsertBuzz): Promise<Buzz> {
+    const [buzz] = await db.insert(buzzes).values(insertBuzz).returning();
+    return buzz;
+  }
+
+  async getBuzzesByQuestion(questionId: string): Promise<Buzz[]> {
+    return await db.select().from(buzzes).where(eq(buzzes.questionId, questionId));
+  }
+
+  async clearBuzzesForQuestion(questionId: string): Promise<void> {
+    await db.delete(buzzes).where(eq(buzzes.questionId, questionId));
+  }
+
+  // Game Answer methods
+  async createGameAnswer(insertAnswer: InsertGameAnswer): Promise<GameAnswer> {
+    const [answer] = await db.insert(gameAnswers).values(insertAnswer).returning();
+    return answer;
+  }
+
+  async getGameAnswersByQuestion(questionId: string): Promise<GameAnswer[]> {
+    return await db.select().from(gameAnswers).where(eq(gameAnswers.questionId, questionId));
+  }
+
+  // Utility methods
+  async generateRoomCode(): Promise<string> {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let result = "";
+    for (let i = 0; i < 4; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    // Check if room code already exists
+    const existing = await this.getGameByRoomCode(result);
+    if (existing) {
+      return this.generateRoomCode(); // Recursively generate new code
+    }
+    
+    return result;
+  }
+}
+
+export const storage = new DatabaseStorage();
