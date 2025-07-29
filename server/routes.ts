@@ -50,12 +50,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         switch (message.type) {
           case 'create_game': {
             console.log('Processing create_game message:', message.data);
-            const { gameName, hostName, categories } = message.data;
-            const roomCode = await storage.generateRoomCode();
-            console.log('Generated room code:', roomCode);
+            const { gameName, hostName, categories, gameSetup: gameSetupStr } = message.data;
             
-            const hostCode = storage.generateAuthCode();
-            const playerCode = storage.generateAuthCode();
+            // Extract codes from gameSetup if provided
+            let roomCode: string;
+            let hostCode: string;
+            let playerCode: string;
+            
+            if (gameSetupStr) {
+              try {
+                const gameSetup = JSON.parse(gameSetupStr);
+                roomCode = gameSetup.roomCode || await storage.generateRoomCode();
+                hostCode = gameSetup.adminCode || storage.generateAuthCode();
+                playerCode = storage.generateAuthCode(); // Always generate player code
+                console.log('Using codes from setup - Room:', roomCode, 'Host:', hostCode);
+              } catch (e) {
+                console.log('Failed to parse gameSetup, generating new codes');
+                roomCode = await storage.generateRoomCode();
+                hostCode = storage.generateAuthCode();
+                playerCode = storage.generateAuthCode();
+              }
+            } else {
+              roomCode = await storage.generateRoomCode();
+              hostCode = storage.generateAuthCode();
+              playerCode = storage.generateAuthCode();
+            }
             
             const game = await storage.createGame({
               roomCode,
@@ -70,7 +89,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('Created game:', game);
 
             // Check if we have custom questions from setup
-            const gameSetupStr = message.data.gameSetup;
             if (gameSetupStr) {
               try {
                 const gameSetup = JSON.parse(gameSetupStr);

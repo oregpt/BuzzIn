@@ -107,7 +107,13 @@ export default function GameLobby() {
 
   onMessage("game_joined", (data) => {
     console.log('Game joined successfully:', data);
-    navigate("/play");
+    // Check if the joined player is a host based on the player data
+    const isHost = data.players?.find(p => p.id === data.playerId)?.isHost;
+    if (isHost) {
+      navigate("/host");
+    } else {
+      navigate("/play");
+    }
   });
 
   onMessage("error", (data) => {

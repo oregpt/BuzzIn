@@ -75,11 +75,14 @@ export default function GameSetupSimple() {
 
   const handleCodes = (e: React.FormEvent) => {
     e.preventDefault();
-    setGameSetup(prev => ({
-      ...prev,
-      roomCode: prev.roomCode || generateCode(4),
-      adminCode: prev.adminCode || generateCode(6)
-    }));
+    if (!gameSetup.roomCode.trim() || !gameSetup.adminCode.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter both room code and admin code",
+        variant: "destructive",
+      });
+      return;
+    }
     setStep('categories');
   };
 
