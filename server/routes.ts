@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { z } from "zod";
 import type { WSMessage, WSResponse, Player, Game, Question } from "@shared/schema";
 
 interface ExtendedWebSocket extends WebSocket {
@@ -511,6 +512,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching open games:', error);
       res.status(500).json({ error: 'Failed to fetch open games' });
+    }
+  });
+
+  // REST API endpoint for updating questions
+  app.put('/api/questions/:id', async (req, res) => {
+    try {
+      const questionId = req.params.id;
+      const updates = req.body;
+      
+      // Validate the updates using Zod
+      const updateSchema = z.object({
+        question: z.string().optional(),
+        correctAnswer: z.string().optional(),
+        type: z.enum(['multiple_choice', 'true_false', 'specific_answer']).optional(),
+        options: z.array(z.string()).nullable().optional(),
+      });
+      
+      const validatedUpdates = updateSchema.parse(updates);
+      
+      const updatedQuestion = await storage.updateQuestion(questionId, validatedUpdates);
+      
+      if (!updatedQuestion) {
+        return res.status(404).json({ error: 'Question not found' });
+      }
+      
+      res.json(updatedQuestion);
+    } catch (error) {
+      console.error('Error updating question:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+      }
+      res.status(500).json({ error: 'Failed to update question' });
     }
   });
 

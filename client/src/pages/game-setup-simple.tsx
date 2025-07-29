@@ -148,24 +148,53 @@ export default function GameSetupSimple() {
     const actualCategory = currentQuestion.category || "HISTORY";
     const actualValue = currentQuestion.value || 100;
 
-    const question: Question = {
-      id: `q_${Date.now()}`,
-      gameId: "temp", // Will be updated when game is created
-      category: actualCategory,
-      value: actualValue,
-      question: currentQuestion.question!,
-      type: currentQuestion.type!,
-      correctAnswer: currentQuestion.correctAnswer!,
-      options: currentQuestion.type === 'multiple_choice' ? (currentQuestion.options || []) : null,
-      isUsed: false
-    };
+    if (editingQuestionId) {
+      // Update existing question
+      setGameSetup(prev => ({
+        ...prev,
+        questions: prev.questions.map(q => 
+          q.id === editingQuestionId 
+            ? {
+                ...q,
+                question: currentQuestion.question!,
+                type: currentQuestion.type!,
+                correctAnswer: currentQuestion.correctAnswer!,
+                options: currentQuestion.type === 'multiple_choice' ? (currentQuestion.options || []) : null,
+              }
+            : q
+        )
+      }));
 
-    console.log('Adding question:', question); // Debug log
+      toast({
+        title: "Question Updated",
+        description: `Updated question for ${actualCategory} - $${actualValue}`,
+      });
+    } else {
+      // Add new question
+      const question: Question = {
+        id: `q_${Date.now()}`,
+        gameId: "temp", // Will be updated when game is created
+        category: actualCategory,
+        value: actualValue,
+        question: currentQuestion.question!,
+        type: currentQuestion.type!,
+        correctAnswer: currentQuestion.correctAnswer!,
+        options: currentQuestion.type === 'multiple_choice' ? (currentQuestion.options || []) : null,
+        isUsed: false
+      };
 
-    setGameSetup(prev => ({
-      ...prev,
-      questions: [...prev.questions, question]
-    }));
+      console.log('Adding question:', question); // Debug log
+
+      setGameSetup(prev => ({
+        ...prev,
+        questions: [...prev.questions, question]
+      }));
+
+      toast({
+        title: "Question Added",
+        description: `Added question for ${actualCategory} - $${actualValue}`,
+      });
+    }
 
     // Reset form and close modal
     setCurrentQuestion({
@@ -176,12 +205,8 @@ export default function GameSetupSimple() {
       correctAnswer: "",
       options: null
     });
+    setEditingQuestionId(null);
     setShowQuestionForm(false);
-
-    toast({
-      title: "Question Added",
-      description: `Added question for ${actualCategory} - $${actualValue}`,
-    });
   };
 
   const completeSetup = () => {

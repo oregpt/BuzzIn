@@ -55,3 +55,14 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Helper function for updating questions
+export async function updateQuestion(questionId: string, updates: {
+  question?: string;
+  correctAnswer?: string;
+  type?: 'multiple_choice' | 'true_false' | 'specific_answer';
+  options?: string[] | null;
+}) {
+  const res = await apiRequest('PUT', `/api/questions/${questionId}`, updates);
+  return await res.json();
+}
