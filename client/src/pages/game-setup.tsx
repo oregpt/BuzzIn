@@ -177,6 +177,33 @@ export default function GameSetup() {
             Game Setup
           </h1>
           <p className="text-gray-300">Configure your trivia game</p>
+          
+          {/* Step indicator */}
+          <div className="flex justify-center mt-4 space-x-2">
+            {['basic', 'codes', 'categories', 'questions'].map((stepName, index) => (
+              <div
+                key={stepName}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  step === stepName
+                    ? 'bg-game-primary text-white'
+                    : ['basic', 'codes', 'categories', 'questions'].indexOf(step) > index
+                    ? 'bg-game-accent text-game-dark'
+                    : 'bg-gray-600 text-gray-300'
+                }`}
+              >
+                {index + 1}
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-2 text-sm text-gray-400">
+            Step {['basic', 'codes', 'categories', 'questions'].indexOf(step) + 1} of 4: {
+              step === 'basic' ? 'Basic Information' :
+              step === 'codes' ? 'Access Codes' :
+              step === 'categories' ? 'Game Categories' :
+              'Add Questions'
+            }
+          </div>
         </header>
 
         {/* Step 1: Basic Information */}
@@ -196,7 +223,7 @@ export default function GameSetup() {
                     value={gameSetup.gameName}
                     onChange={(e) => setGameSetup(prev => ({ ...prev, gameName: e.target.value }))}
                     placeholder="Friday Night Trivia"
-                    className="bg-game-dark border-border-game-gray text-white"
+                    className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400"
                   />
                 </div>
                 <div>
@@ -205,7 +232,7 @@ export default function GameSetup() {
                     value={gameSetup.hostName}
                     onChange={(e) => setGameSetup(prev => ({ ...prev, hostName: e.target.value }))}
                     placeholder="Your Name"
-                    className="bg-game-dark border-border-game-gray text-white"
+                    className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400"
                   />
                 </div>
                 <Button type="submit" className="w-full bg-game-primary hover:bg-blue-700">
@@ -233,7 +260,7 @@ export default function GameSetup() {
                       onChange={(e) => setGameSetup(prev => ({ ...prev, roomCode: e.target.value.toUpperCase() }))}
                       placeholder="ABCD"
                       maxLength={4}
-                      className="bg-game-dark border-border-game-gray text-white font-game text-2xl text-center tracking-widest"
+                      className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400 font-game text-2xl text-center tracking-widest"
                     />
                     <Button 
                       type="button" 
@@ -252,7 +279,7 @@ export default function GameSetup() {
                       onChange={(e) => setGameSetup(prev => ({ ...prev, adminCode: e.target.value.toUpperCase() }))}
                       placeholder="ABC123"
                       maxLength={6}
-                      className="bg-game-dark border-border-game-gray text-white font-mono text-lg text-center tracking-wider"
+                      className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400 font-mono text-lg text-center tracking-wider"
                     />
                     <Button 
                       type="button" 
@@ -356,7 +383,7 @@ export default function GameSetup() {
                       value={currentQuestion.question}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, question: e.target.value }))}
                       placeholder="Enter your question here..."
-                      className="bg-game-dark border-border-game-gray text-white"
+                      className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400"
                       rows={3}
                     />
                   </div>
@@ -380,7 +407,7 @@ export default function GameSetup() {
                       value={currentQuestion.correctAnswer}
                       onChange={(e) => setCurrentQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
                       placeholder="Enter the correct answer"
-                      className="bg-game-dark border-border-game-gray text-white"
+                      className="bg-game-dark border-border-game-gray text-white placeholder:text-gray-400"
                     />
                   </div>
 
