@@ -49,19 +49,7 @@ export default function GameSetupSimple() {
     options: null
   });
 
-  // Load basic info from localStorage if available
-  React.useEffect(() => {
-    const basicInfo = localStorage.getItem('basicGameInfo');
-    if (basicInfo) {
-      const parsed = JSON.parse(basicInfo);
-      setGameSetup(prev => ({
-        ...prev,
-        gameName: parsed.gameName,
-        hostName: parsed.hostName
-      }));
-      localStorage.removeItem('basicGameInfo');
-    }
-  }, []);
+  // No need to load basic info from localStorage since we removed the pre-form
 
   const generateCode = (length: number) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
