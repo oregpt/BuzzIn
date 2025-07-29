@@ -37,6 +37,7 @@ export interface IStorage {
 
   // Utility methods
   generateRoomCode(): Promise<string>;
+  generateAuthCode(): string;
   initializeDefaultQuestions(gameId: string, categories: string[]): Promise<void>;
 }
 
@@ -129,6 +130,16 @@ export class MemStorage implements IStorage {
     return code;
   }
 
+  generateAuthCode(): string {
+    // Generate 6-character alphanumeric code
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
   async createGame(insertGame: InsertGame): Promise<Game> {
     const id = randomUUID();
     const game: Game = {
@@ -140,6 +151,8 @@ export class MemStorage implements IStorage {
       status: insertGame.status || "waiting",
       currentQuestionId: insertGame.currentQuestionId || null,
       lastCorrectPlayerId: null,
+      hostCode: insertGame.hostCode || this.generateAuthCode(),
+      playerCode: insertGame.playerCode || this.generateAuthCode(),
       createdAt: new Date(),
     };
     this.games.set(id, game);

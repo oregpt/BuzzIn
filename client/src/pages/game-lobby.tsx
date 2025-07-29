@@ -28,6 +28,7 @@ export default function GameLobby() {
   const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [selectedGame, setSelectedGame] = useState<GameWithPlayerCount | null>(null);
   const [joinType, setJoinType] = useState<'host' | 'player'>('player');
+  const [authCode, setAuthCode] = useState('');
 
   // Fetch open games
   const { data: openGames = [], isLoading: isLoadingGames, refetch: refetchGames } = useQuery<GameWithPlayerCount[]>({
@@ -68,17 +69,35 @@ export default function GameLobby() {
 
   const handleJoinOpenGame = (game: GameWithPlayerCount) => {
     setSelectedGame(game);
+    setAuthCode('');
+    setJoinType('player');
     setShowJoinDialog(true);
   };
 
   const handleJoinDialogSubmit = () => {
     if (!selectedGame) return;
 
+    // Validate auth code is entered
+    if (!authCode.trim()) {
+      toast({
+        title: "Error",
+        description: `Please enter the ${joinType} code`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (joinType === 'host') {
-      // Navigate to host page with room code
-      navigate(`/host?roomCode=${selectedGame.roomCode}`);
+      // Send message to verify host code and join as host
+      sendMessage({
+        type: "join_as_host",
+        data: {
+          roomCode: selectedGame.roomCode,
+          hostCode: authCode.trim()
+        },
+      });
     } else {
-      // Join as player
+      // Join as player with player code
       if (!joinForm.playerName.trim()) {
         toast({
           title: "Error",
@@ -93,12 +112,14 @@ export default function GameLobby() {
         data: {
           roomCode: selectedGame.roomCode,
           playerName: joinForm.playerName,
+          playerCode: authCode.trim()
         },
       });
     }
     
     setShowJoinDialog(false);
     setSelectedGame(null);
+    setAuthCode('');
   };
 
   // Handle WebSocket responses
@@ -347,6 +368,27 @@ export default function GameLobby() {
               </Button>
             </div>
 
+            {/* Auth Code Input */}
+            <div className="space-y-2">
+              <Label htmlFor="authCode" className="text-sm font-medium">
+                {joinType === 'host' ? 'Host Code' : 'Player Code'}
+              </Label>
+              <Input
+                id="authCode"
+                type="password"
+                placeholder={`Enter ${joinType} code`}
+                value={authCode}
+                onChange={(e) => setAuthCode(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {joinType === 'host' 
+                  ? 'Enter the host code to control this game' 
+                  : 'Enter the player code to join this game'
+                }
+              </p>
+            </div>
+
             {joinType === 'player' && !joinForm.playerName.trim() && (
               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                 <p className="text-sm text-yellow-800 dark:text-yellow-200">
@@ -362,7 +404,10 @@ export default function GameLobby() {
             </Button>
             <Button 
               onClick={handleJoinDialogSubmit}
-              disabled={joinType === 'player' && !joinForm.playerName.trim()}
+              disabled={
+                !authCode.trim() || 
+                (joinType === 'player' && !joinForm.playerName.trim())
+              }
             >
               {joinType === 'host' ? 'Join as Host' : 'Join as Player'}
             </Button>

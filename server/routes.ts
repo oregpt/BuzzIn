@@ -115,7 +115,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('Sending game_created response to host:', host.id);
             const response: WSResponse = {
               type: "game_created",
-              data: { roomCode, gameId: game.id }
+              data: { 
+                roomCode, 
+                gameId: game.id,
+                hostCode: game.hostCode,
+                playerCode: game.playerCode
+              }
             };
             console.log('Response being sent:', response);
             sendToPlayer(host.id, response);
@@ -123,13 +128,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           case 'join_game': {
-            const { roomCode, playerName } = message.data;
+            const { roomCode, playerName, playerCode } = message.data;
             const game = await storage.getGameByRoomCode(roomCode);
             
             if (!game) {
               sendToPlayer(ws.playerId || '', {
                 type: "error",
                 data: { message: "Game not found" }
+              });
+              break;
+            }
+
+            // Validate player code if provided
+            if (playerCode && playerCode !== game.playerCode) {
+              sendToPlayer(ws.playerId || '', {
+                type: "error",
+                data: { message: "Invalid player code" }
               });
               break;
             }
@@ -162,6 +176,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
             broadcastToGame(game.id, {
               type: "player_joined",
               data: { player }
+            });
+            break;
+          }
+
+          case 'join_as_host': {
+            const { roomCode, hostCode } = message.data;
+            const game = await storage.getGameByRoomCode(roomCode);
+            
+            if (!game) {
+              sendToPlayer(ws.playerId || '', {
+                type: "error",
+                data: { message: "Game not found" }
+              });
+              break;
+            }
+
+            // Validate host code
+            if (hostCode !== game.hostCode) {
+              sendToPlayer(ws.playerId || '', {
+                type: "error",
+                data: { message: "Invalid host code" }
+              });
+              break;
+            }
+
+            // Create or update host player entry
+            const existingPlayers = await storage.getPlayersByGameId(game.id);
+            let hostPlayer = existingPlayers.find(p => p.isHost);
+            
+            if (!hostPlayer) {
+              hostPlayer = await storage.createPlayer({
+                gameId: game.id,
+                name: game.hostName,
+                score: 0,
+                isHost: true,
+                socketId: null,
+              });
+            }
+
+            ws.playerId = hostPlayer.id;
+            ws.gameId = game.id;
+            connections.set(hostPlayer.id, ws);
+            
+            if (!gameConnections.has(game.id)) {
+              gameConnections.set(game.id, new Set());
+            }
+            gameConnections.get(game.id)!.add(hostPlayer.id);
+
+            const allPlayers = await storage.getPlayersByGameId(game.id);
+
+            const joinResponse: WSResponse = {
+              type: "game_joined",
+              data: { playerId: hostPlayer.id, gameId: game.id, players: allPlayers }
+            };
+            sendToPlayer(hostPlayer.id, joinResponse);
+
+            broadcastToGame(game.id, {
+              type: "host_joined",
+              data: { player: hostPlayer }
             });
             break;
           }

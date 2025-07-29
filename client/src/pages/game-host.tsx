@@ -135,7 +135,8 @@ export default function GameHost() {
     
     toast({
       title: "Game Created!",
-      description: `Room Code: ${data.roomCode}`,
+      description: `Room: ${data.roomCode} | Host Code: ${data.hostCode} | Player Code: ${data.playerCode}`,
+      duration: 10000, // Show longer so host can note the codes
     });
   });
 
