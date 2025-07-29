@@ -478,6 +478,29 @@ export class DatabaseStorage implements IStorage {
       { category: "GENERAL", value: 300, question: "What is the most spoken language in the world?", type: "multiple_choice", correctAnswer: "A", options: ["Mandarin Chinese", "English", "Spanish", "Hindi"] },
       { category: "GENERAL", value: 400, question: "The human body has 206 bones.", type: "true_false", correctAnswer: "true", options: null },
       { category: "GENERAL", value: 500, question: "This gas makes up about 78% of Earth's atmosphere.", type: "specific_answer", correctAnswer: "Nitrogen", options: null },
+      { category: "TECHNOLOGY", value: 400, question: "The first computer bug was actually a real insect.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "TECHNOLOGY", value: 500, question: "This programming language was created by Guido van Rossum.", type: "specific_answer", correctAnswer: "Python", options: null },
+
+      // NATURE
+      { category: "NATURE", value: 100, question: "Penguins can fly.", type: "true_false", correctAnswer: "false", options: null },
+      { category: "NATURE", value: 200, question: "This is the largest mammal in the world.", type: "specific_answer", correctAnswer: "Blue Whale", options: null },
+      { category: "NATURE", value: 300, question: "How many chambers does a human heart have?", type: "multiple_choice", correctAnswer: "C", options: ["2", "3", "4", "5"] },
+      { category: "NATURE", value: 400, question: "Sharks are mammals.", type: "true_false", correctAnswer: "false", options: null },
+      { category: "NATURE", value: 500, question: "This flower is known as the 'king of flowers'.", type: "specific_answer", correctAnswer: "Peony", options: null },
+
+      // ART
+      { category: "ART", value: 100, question: "Leonardo da Vinci painted the Mona Lisa.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "ART", value: 200, question: "This artist cut off his own ear.", type: "specific_answer", correctAnswer: "Van Gogh", options: null },
+      { category: "ART", value: 300, question: "Which museum houses the Mona Lisa?", type: "multiple_choice", correctAnswer: "B", options: ["Metropolitan Museum", "Louvre", "British Museum", "Uffizi"] },
+      { category: "ART", value: 400, question: "Pablo Picasso co-founded the Cubist movement.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "ART", value: 500, question: "This sculpture by Michelangelo depicts the biblical David.", type: "specific_answer", correctAnswer: "David", options: null },
+
+      // GENERAL
+      { category: "GENERAL", value: 100, question: "There are 365 days in a regular year.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "GENERAL", value: 200, question: "This invention allows us to see our own reflection.", type: "specific_answer", correctAnswer: "Mirror", options: null },
+      { category: "GENERAL", value: 300, question: "What is the most spoken language in the world?", type: "multiple_choice", correctAnswer: "A", options: ["Mandarin Chinese", "English", "Spanish", "Hindi"] },
+      { category: "GENERAL", value: 400, question: "The human body has 206 bones.", type: "true_false", correctAnswer: "true", options: null },
+      { category: "GENERAL", value: 500, question: "This gas makes up about 78% of Earth's atmosphere.", type: "specific_answer", correctAnswer: "Nitrogen", options: null },
     ];
 
     const values = [100, 200, 300, 400, 500];

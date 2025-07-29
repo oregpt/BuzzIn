@@ -58,6 +58,12 @@ export default function GameHost() {
     if (gameSetup) {
       const setup = JSON.parse(gameSetup);
       
+      // Update local state with custom categories first
+      setGameState(prev => ({
+        ...prev,
+        categories: setup.categories
+      }));
+      
       // Create game with custom categories and questions via WebSocket
       sendMessage({
         type: "create_game",
@@ -121,14 +127,19 @@ export default function GameHost() {
   });
 
   onMessage("question_selected", (data) => {
-    setGameState(prev => ({
-      ...prev,
-      currentQuestion: data.question,
-      buzzerResults: [],
-      submittedAnswers: [],
-      selectedBy: data.selectedBy || null,
-    }));
-    setShowQuestion(true);
+    console.log('Question selected:', data);
+    if (data.question) {
+      const questionKey = `${data.question.category}-${data.question.value}`;
+      setGameState(prev => ({
+        ...prev,
+        currentQuestion: data.question,
+        buzzerResults: [],
+        submittedAnswers: [],
+        selectedBy: data.selectedBy || null,
+        usedQuestions: new Set([...prev.usedQuestions, questionKey])
+      }));
+      setShowQuestion(true);
+    }
   });
 
   onMessage("buzz_received", (data) => {
@@ -171,10 +182,11 @@ export default function GameHost() {
 
   onMessage("question_closed", (data) => {
     if (gameState.currentQuestion) {
+      const questionKey = `${gameState.currentQuestion.category}-${gameState.currentQuestion.value}`;
       setGameState(prev => ({
         ...prev,
         currentQuestion: null,
-        usedQuestions: new Set(Array.from(prev.usedQuestions).concat([prev.currentQuestion!.id])),
+        usedQuestions: new Set(Array.from(prev.usedQuestions).concat([questionKey])),
         nextPicker: data.nextPicker || null,
       }));
     }
@@ -182,9 +194,8 @@ export default function GameHost() {
   });
 
   const handleSelectQuestion = (category: string, value: number) => {
-    const questionKey = `${category}-${value}`;
-    if (gameState.usedQuestions.has(questionKey)) return;
-
+    console.log('Selecting question:', { category, value, usedQuestions: Array.from(gameState.usedQuestions) });
+    
     sendMessage({
       type: "select_question",
       data: { 
@@ -279,6 +290,7 @@ export default function GameHost() {
               {VALUES.map(value => 
                 gameState.categories.map(category => {
                   const questionKey = `${category}-${value}`;
+                  // For now, let's use the questionKey format for consistency
                   const isUsed = gameState.usedQuestions.has(questionKey);
                   
                   return (
