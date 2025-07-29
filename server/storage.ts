@@ -597,6 +597,11 @@ export class DatabaseStorage implements IStorage {
     
     return result;
   }
+
+  generateAuthCode(): string {
+    // Generate a 6-character authentication code
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
 }
 
 export const storage = new DatabaseStorage();

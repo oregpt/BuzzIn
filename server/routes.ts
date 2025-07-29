@@ -53,6 +53,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const roomCode = await storage.generateRoomCode();
             console.log('Generated room code:', roomCode);
             
+            const hostCode = storage.generateAuthCode();
+            const playerCode = storage.generateAuthCode();
+            
             const game = await storage.createGame({
               roomCode,
               hostName,
@@ -60,6 +63,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               categories: categories || ["HISTORY", "SCIENCE", "SPORTS", "MOVIES", "GEOGRAPHY", "LITERATURE"],
               status: "waiting",
               currentQuestionId: null,
+              hostCode,
+              playerCode,
             });
             console.log('Created game:', game);
 
@@ -424,19 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
           }
 
-          case 'mark_question_used': {
-            const { questionId } = message.data;
-            if (!ws.gameId) break;
 
-            await storage.updateQuestion(questionId, { isUsed: true });
-            
-            // Notify all players that question is now used
-            broadcastToGame(ws.gameId, {
-              type: "question_marked_used",
-              data: { questionId }
-            });
-            break;
-          }
 
           case 'end_game': {
             if (!ws.gameId) break;
