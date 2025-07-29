@@ -62,8 +62,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const gameSetup = JSON.parse(gameSetupStr);
                 roomCode = gameSetup.roomCode || await storage.generateRoomCode();
                 hostCode = gameSetup.adminCode || storage.generateAuthCode();
-                playerCode = storage.generateAuthCode(); // Always generate player code
-                console.log('Using codes from setup - Room:', roomCode, 'Host:', hostCode);
+                playerCode = gameSetup.playerCode || storage.generateAuthCode();
+                console.log('Using codes from setup - Room:', roomCode, 'Host:', hostCode, 'Player:', playerCode);
               } catch (e) {
                 console.log('Failed to parse gameSetup, generating new codes');
                 roomCode = await storage.generateRoomCode();
