@@ -429,7 +429,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
           }
 
+          case 'mark_question_used': {
+            const { questionId } = message.data;
+            if (!ws.gameId) break;
 
+            await storage.updateQuestion(questionId, { isUsed: true });
+            
+            // Notify all players that question is now used
+            broadcastToGame(ws.gameId, {
+              type: "question_marked_used",
+              data: { questionId }
+            });
+            break;
+          }
 
           case 'end_game': {
             if (!ws.gameId) break;

@@ -116,6 +116,7 @@ export type WSMessage =
   | { type: "buzz"; data: { questionId: string } }
   | { type: "submit_answer"; data: { questionId: string; answer: string } }
   | { type: "mark_answer"; data: { playerId: string; isCorrect: boolean; acceptClose?: boolean } }
+  | { type: "mark_question_used"; data: { questionId: string } }
   | { type: "close_question"; data: {} }
   | { type: "end_game"; data: {} };
 
@@ -128,6 +129,7 @@ export type WSResponse =
   | { type: "buzz_received"; data: { playerId: string; playerName: string; timestamp: number; isFirst: boolean; buzzOrder: number } }
   | { type: "answer_submitted"; data: { playerId: string; playerName: string; answer: string } }
   | { type: "answer_marked"; data: { playerId: string; isCorrect: boolean; pointsAwarded: number; newScore: number; canPickNext: boolean } }
+  | { type: "question_marked_used"; data: { questionId: string } }
   | { type: "question_closed"; data: { nextPicker?: { playerId: string; playerName: string } } }
   | { type: "game_ended"; data: { finalStandings: Array<Player & { rank: number }> } }
   | { type: "game_updated"; data: { game: Game; players: Player[] } }
