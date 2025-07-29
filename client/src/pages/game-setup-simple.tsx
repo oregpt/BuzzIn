@@ -93,10 +93,19 @@ export default function GameSetupSimple() {
   };
 
   const removeCategory = (index: number) => {
+    const categoryToRemove = gameSetup.categories[index];
+    
     setGameSetup(prev => ({
       ...prev,
-      categories: prev.categories.filter((_, i) => i !== index)
+      categories: prev.categories.filter((_, i) => i !== index),
+      // Also remove any questions from the removed category
+      questions: prev.questions.filter(q => q.category !== categoryToRemove)
     }));
+    
+    toast({
+      title: "Category Removed",
+      description: `Removed ${categoryToRemove} and all its questions`,
+    });
   };
 
   const addQuestion = () => {
@@ -296,6 +305,7 @@ export default function GameSetupSimple() {
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
               <CardTitle className="text-2xl text-white">Game Categories</CardTitle>
+              <p className="text-gray-300 text-sm mt-2">Select which categories to include in your game. You can remove categories you don't want to use.</p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -307,22 +317,32 @@ export default function GameSetupSimple() {
                         size="sm"
                         variant="destructive"
                         onClick={() => removeCategory(index)}
+                        className="text-red-400 hover:text-white hover:bg-red-600"
                       >
                         ×
                       </Button>
                     </div>
                   ))}
                 </div>
-                <Button onClick={addCategory} variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Category
-                </Button>
+                
+                {gameSetup.categories.length < 6 && (
+                  <Button onClick={addCategory} variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Custom Category
+                  </Button>
+                )}
+                
+                <div className="text-center text-gray-400 text-sm">
+                  Current categories: {gameSetup.categories.length} (Need at least 6 for the board)
+                </div>
+                
                 <Button 
                   onClick={() => setStep('questions')} 
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={gameSetup.categories.length < 6}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600 disabled:cursor-not-allowed"
                 >
                   <ArrowRight className="mr-2 h-4 w-4" />
-                  Continue to Questions
+                  Continue to Questions ({gameSetup.categories.length}/6 categories)
                 </Button>
               </div>
             </CardContent>
@@ -341,7 +361,7 @@ export default function GameSetupSimple() {
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-6 gap-2">
+                <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${gameSetup.categories.length}, minmax(0, 1fr))` }}>
                   {/* Header row with categories */}
                   {gameSetup.categories.map((category, categoryIndex) => (
                     <div key={category} className="bg-blue-700 text-white p-3 text-center font-bold text-sm rounded">
