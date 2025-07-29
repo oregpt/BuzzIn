@@ -243,16 +243,16 @@ export default function GameLobby() {
 
       {/* Join Game Dialog */}
       <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
-        <DialogContent>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
-            <DialogTitle>Join Game: {selectedGame?.gameName}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white text-xl">Join Game: {selectedGame?.gameName}</DialogTitle>
+            <DialogDescription className="text-gray-300">
               Room Code: {selectedGame?.roomCode} | Host: {selectedGame?.hostName}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="space-y-6">
+            <div className="text-sm text-gray-300">
               How would you like to join this game?
             </div>
             
@@ -260,54 +260,62 @@ export default function GameLobby() {
               <Button
                 variant={joinType === 'player' ? 'default' : 'outline'}
                 onClick={() => setJoinType('player')}
-                className="flex flex-col items-center p-4 h-auto"
+                className={`flex flex-col items-center p-4 h-auto ${
+                  joinType === 'player' 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600'
+                }`}
               >
                 <Users className="w-6 h-6 mb-2" />
                 <span className="font-medium">As Player</span>
-                <span className="text-xs text-gray-500">Join the game to play</span>
+                <span className="text-xs opacity-75">Join the game to play</span>
               </Button>
               
               <Button
                 variant={joinType === 'host' ? 'default' : 'outline'}
                 onClick={() => setJoinType('host')}
-                className="flex flex-col items-center p-4 h-auto"
+                className={`flex flex-col items-center p-4 h-auto ${
+                  joinType === 'host' 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600'
+                }`}
               >
                 <Crown className="w-6 h-6 mb-2" />
                 <span className="font-medium">As Host</span>
-                <span className="text-xs text-gray-500">Control the game</span>
+                <span className="text-xs opacity-75">Control the game</span>
               </Button>
             </div>
 
             {/* Player Name Input (only for player role) */}
             {joinType === 'player' && (
               <div className="space-y-2">
-                <Label htmlFor="dialogPlayerName" className="text-sm font-medium">
+                <Label htmlFor="dialogPlayerName" className="text-gray-300 mb-2 block">
                   Your Name
                 </Label>
-                <Input
+                <input
                   id="dialogPlayerName"
                   placeholder="Enter your name"
                   value={joinForm.playerName}
                   onChange={(e) => setJoinForm(prev => ({ ...prev, playerName: e.target.value }))}
-                  className="w-full bg-white dark:bg-gray-800 text-black dark:text-white border-gray-300 dark:border-gray-600"
+                  className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             )}
 
             {/* Auth Code Input */}
             <div className="space-y-2">
-              <Label htmlFor="authCode" className="text-sm font-medium">
+              <Label htmlFor="authCode" className="text-gray-300 mb-2 block">
                 {joinType === 'host' ? 'Host Code' : 'Player Code'}
               </Label>
-              <Input
+              <input
                 id="authCode"
                 type="password"
                 placeholder={`Enter ${joinType} code`}
                 value={authCode}
                 onChange={(e) => setAuthCode(e.target.value)}
-                className="w-full bg-white dark:bg-gray-800 text-black dark:text-white border-gray-300 dark:border-gray-600"
+                className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-400">
                 {joinType === 'host' 
                   ? 'Enter the host code to control this game' 
                   : 'Enter the player code to join this game'
@@ -317,7 +325,11 @@ export default function GameLobby() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowJoinDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowJoinDialog(false)}
+              className="bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600"
+            >
               Cancel
             </Button>
             <Button 
@@ -326,6 +338,7 @@ export default function GameLobby() {
                 !authCode.trim() || 
                 (joinType === 'player' && !joinForm.playerName.trim())
               }
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {joinType === 'host' ? 'Join as Host' : 'Join as Player'}
             </Button>
