@@ -6,16 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
 import { Plus, Save, ArrowRight, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_CATEGORIES, DEFAULT_QUESTIONS } from "@/lib/game-data";
+import type { questions } from "../../../shared/schema";
 
-interface Question {
-  id: string;
-  category: string;
-  value: number;
-  question: string;
-  type: 'multiple_choice' | 'true_false' | 'specific_answer';
-  correctAnswer: string;
-  options: string[] | null;
-}
+type Question = typeof questions.$inferSelect;
+
+// Using Question type from shared schema via imported questions table
 
 interface GameSetup {
   gameName: string;
@@ -36,8 +32,8 @@ export default function GameSetupSimple() {
     hostName: "",
     roomCode: "",
     adminCode: "",
-    categories: ["HISTORY", "SCIENCE", "SPORTS", "MOVIES", "GEOGRAPHY", "LITERATURE"],
-    questions: []
+    categories: DEFAULT_CATEGORIES,
+    questions: [...DEFAULT_QUESTIONS]
   });
 
   const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({
@@ -50,6 +46,7 @@ export default function GameSetupSimple() {
   });
 
   const [showQuestionForm, setShowQuestionForm] = useState(false);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
 
   // No need to load basic info from localStorage since we removed the pre-form
 
@@ -123,7 +120,8 @@ export default function GameSetupSimple() {
       question: currentQuestion.question!,
       type: currentQuestion.type!,
       correctAnswer: currentQuestion.correctAnswer!,
-      options: currentQuestion.type === 'multiple_choice' ? (currentQuestion.options || []) : null
+      options: currentQuestion.type === 'multiple_choice' ? (currentQuestion.options || []) : null,
+      isUsed: false
     };
 
     console.log('Adding question:', question); // Debug log
@@ -354,24 +352,41 @@ export default function GameSetupSimple() {
                   {/* Question tiles */}
                   {values.map((value) => (
                     gameSetup.categories.map((category, categoryIndex) => {
-                      const hasQuestion = gameSetup.questions.some(q => q.category === category && q.value === value);
+                      const existingQuestion = gameSetup.questions.find(q => q.category === category && q.value === value);
+                      const hasQuestion = !!existingQuestion;
                       return (
                         <button
                           key={`${category}-${value}`}
                           onClick={() => {
-                            setCurrentQuestion(prev => ({ 
-                              ...prev, 
-                              category: category, 
-                              value: value,
-                              question: "",
-                              correctAnswer: "",
-                              type: 'specific_answer'
-                            }));
+                            if (existingQuestion) {
+                              // Edit existing question
+                              setCurrentQuestion({
+                                id: existingQuestion.id,
+                                category: existingQuestion.category,
+                                value: existingQuestion.value,
+                                question: existingQuestion.question,
+                                type: existingQuestion.type,
+                                correctAnswer: existingQuestion.correctAnswer,
+                                options: existingQuestion.options
+                              });
+                              setEditingQuestionId(existingQuestion.id);
+                            } else {
+                              // Create new question
+                              setCurrentQuestion({
+                                category: category,
+                                value: value,
+                                question: "",
+                                correctAnswer: "",
+                                type: 'specific_answer',
+                                options: null
+                              });
+                              setEditingQuestionId(null);
+                            }
                             setShowQuestionForm(true);
                           }}
                           className={`p-4 rounded font-bold text-lg transition-all duration-200 hover:scale-105 ${
                             hasQuestion 
-                              ? 'bg-green-600 text-white' 
+                              ? 'bg-green-600 text-white hover:bg-green-700' 
                               : 'bg-blue-600 hover:bg-blue-700 text-white'
                           }`}
                         >
@@ -389,7 +404,7 @@ export default function GameSetupSimple() {
               <Card className="bg-gray-800 border-gray-700 border-2 border-blue-500">
                 <CardHeader>
                   <CardTitle className="text-xl text-white">
-                    Create Question: {currentQuestion.category} - ${currentQuestion.value}
+                    {editingQuestionId ? 'Edit' : 'Create'} Question: {currentQuestion.category} - ${currentQuestion.value}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -435,11 +450,14 @@ export default function GameSetupSimple() {
                         onClick={addQuestion} 
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                       >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Save Question
+                        <Save className="mr-2 h-4 w-4" />
+                        {editingQuestionId ? 'Update' : 'Save'} Question
                       </Button>
                       <Button 
-                        onClick={() => setShowQuestionForm(false)}
+                        onClick={() => {
+                          setShowQuestionForm(false);
+                          setEditingQuestionId(null);
+                        }}
                         variant="outline" 
                         className="border-gray-600 text-gray-300 hover:bg-gray-700"
                       >

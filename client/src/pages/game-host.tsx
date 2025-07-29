@@ -5,7 +5,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
 import { Trophy, Users, Pause, Square, Check, X, Star, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { CATEGORIES, VALUES, formatCurrency } from "@/lib/game-data";
+import { DEFAULT_CATEGORIES, VALUES, formatCurrency } from "@/lib/game-data";
 import type { Player, Question } from "@shared/schema";
 
 interface GameState {
@@ -234,7 +234,7 @@ export default function GameHost() {
           <CardContent className="pt-6">
             <div className="grid grid-cols-6 gap-3">
               {/* Category Headers */}
-              {CATEGORIES.map(category => (
+              {DEFAULT_CATEGORIES.map(category => (
                 <div
                   key={category}
                   className="bg-game-primary text-white p-4 rounded-lg text-center font-bold text-sm md:text-base"
