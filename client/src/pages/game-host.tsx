@@ -50,6 +50,7 @@ export default function GameHost() {
   });
 
   const [showQuestion, setShowQuestion] = useState(false);
+  const [showAnswer, setShowAnswer] = useState(false);
 
   // Initialize from game setup or URL params
   useEffect(() => {
@@ -139,6 +140,7 @@ export default function GameHost() {
         usedQuestions: new Set([...prev.usedQuestions, questionKey])
       }));
       setShowQuestion(true);
+      setShowAnswer(false); // Reset answer visibility for new question
     }
   });
 
@@ -191,6 +193,7 @@ export default function GameHost() {
       }));
     }
     setShowQuestion(false);
+    setShowAnswer(false); // Reset answer visibility when question closes
   });
 
   const handleSelectQuestion = (category: string, value: number) => {
@@ -218,6 +221,20 @@ export default function GameHost() {
       type: "close_question",
       data: {}
     });
+  };
+
+  const handleGoBack = () => {
+    setShowQuestion(false);
+    setShowAnswer(false);
+  };
+
+  const handleShowAnswer = () => {
+    setShowAnswer(true);
+  };
+
+  const handleMarkUsed = () => {
+    // Mark the question as used and close
+    handleCloseQuestion();
   };
 
   const handleEndGame = () => {
@@ -421,6 +438,20 @@ export default function GameHost() {
                 </div>
               )}
 
+              {/* Answer Display */}
+              {showAnswer && (
+                <Card className="bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-700 mb-8">
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <div className="text-green-800 dark:text-green-200 text-lg mb-2 font-bold">CORRECT ANSWER:</div>
+                      <div className="text-green-900 dark:text-green-100 text-2xl font-bold">
+                        {gameState.currentQuestion.correctAnswer}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Submitted Answers */}
               {gameState.submittedAnswers.length > 0 && (
                 <div className="mb-8">
@@ -439,40 +470,76 @@ export default function GameHost() {
               )}
 
               {/* Admin Controls */}
-              <div className="flex flex-col md:flex-row gap-4 justify-center">
-                {firstBuzzer && (
-                  <>
+              <div className="flex flex-col gap-4">
+                {/* Primary Question Controls */}
+                {!showAnswer ? (
+                  <div className="flex flex-col md:flex-row gap-4 justify-center">
                     <Button
-                      onClick={() => handleMarkAnswer(firstBuzzer.playerId, true)}
-                      className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                      onClick={handleGoBack}
+                      variant="secondary"
+                      className="bg-gray-600 hover:bg-gray-700 text-white font-bold"
                     >
-                      <Check className="mr-2" />
-                      Correct (+{formatCurrency(gameState.currentQuestion.value)})
+                      <ArrowLeft className="mr-2" />
+                      Go Back (Don't Mark Used)
                     </Button>
                     <Button
-                      onClick={() => handleMarkAnswer(firstBuzzer.playerId, false)}
+                      onClick={handleShowAnswer}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                    >
+                      Show Answer
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col md:flex-row gap-4 justify-center">
+                    <Button
+                      onClick={handleGoBack}
+                      variant="secondary"
+                      className="bg-gray-600 hover:bg-gray-700 text-white font-bold"
+                    >
+                      <ArrowLeft className="mr-2" />
+                      Go Back (Don't Mark Used)
+                    </Button>
+                    <Button
+                      onClick={handleMarkUsed}
                       className="bg-red-600 hover:bg-red-700 text-white font-bold"
                     >
-                      <X className="mr-2" />
-                      Incorrect (-{formatCurrency(gameState.currentQuestion.value)})
+                      <Check className="mr-2" />
+                      Mark Used & Return to Board
                     </Button>
-                    <Button
-                      onClick={() => handleMarkAnswer(firstBuzzer.playerId, false, true)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
-                    >
-                      <Star className="mr-2" />
-                      Accept Close Answer
-                    </Button>
-                  </>
+                  </div>
                 )}
-                <Button
-                  onClick={handleCloseQuestion}
-                  variant="secondary"
-                  className="bg-gray-600 hover:bg-gray-700 text-white font-bold"
-                >
-                  <ArrowLeft className="mr-2" />
-                  Back to Board
-                </Button>
+
+                {/* Buzzer/Answer Controls (when someone has buzzed) */}
+                {firstBuzzer && (
+                  <div className="border-t pt-4">
+                    <div className="text-center mb-4 text-sm text-gray-600 dark:text-gray-400">
+                      Buzzer Controls for {firstBuzzer.playerName}:
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-4 justify-center">
+                      <Button
+                        onClick={() => handleMarkAnswer(firstBuzzer.playerId, true)}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                      >
+                        <Check className="mr-2" />
+                        Correct (+{formatCurrency(gameState.currentQuestion.value)})
+                      </Button>
+                      <Button
+                        onClick={() => handleMarkAnswer(firstBuzzer.playerId, false)}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                      >
+                        <X className="mr-2" />
+                        Incorrect (-{formatCurrency(gameState.currentQuestion.value)})
+                      </Button>
+                      <Button
+                        onClick={() => handleMarkAnswer(firstBuzzer.playerId, false, true)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
+                      >
+                        <Star className="mr-2" />
+                        Accept Close Answer
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
