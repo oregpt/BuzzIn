@@ -122,33 +122,40 @@ export default function GameSetupSimple() {
       return;
     }
 
+    // Ensure we use the current form values, not just state
+    const actualCategory = currentQuestion.category || "HISTORY";
+    const actualValue = currentQuestion.value || 100;
+
     const question: Question = {
       id: `q_${Date.now()}`,
-      category: currentQuestion.category!,
-      value: currentQuestion.value!,
+      category: actualCategory,
+      value: actualValue,
       question: currentQuestion.question!,
       type: currentQuestion.type!,
       correctAnswer: currentQuestion.correctAnswer!,
       options: currentQuestion.type === 'multiple_choice' ? (currentQuestion.options || []) : null
     };
 
+    console.log('Adding question:', question); // Debug log
+
     setGameSetup(prev => ({
       ...prev,
       questions: [...prev.questions, question]
     }));
 
-    setCurrentQuestion({
-      category: currentQuestion.category,
-      value: currentQuestion.value,
+    // Reset form but keep category and value selections
+    setCurrentQuestion(prev => ({
+      category: prev.category,
+      value: prev.value,
       question: "",
       type: 'specific_answer',
       correctAnswer: "",
       options: null
-    });
+    }));
 
     toast({
       title: "Question Added",
-      description: `Added question for ${question.category} - $${question.value}`,
+      description: `Added question for ${actualCategory} - $${actualValue}`,
     });
   };
 
@@ -351,7 +358,10 @@ export default function GameSetupSimple() {
                       <Label className="text-gray-300 mb-2 block">Category</Label>
                       <select
                         value={currentQuestion.category}
-                        onChange={(e) => setCurrentQuestion(prev => ({ ...prev, category: e.target.value }))}
+                        onChange={(e) => {
+                          console.log('Category changed to:', e.target.value);
+                          setCurrentQuestion(prev => ({ ...prev, category: e.target.value }));
+                        }}
                         className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
                       >
                         {gameSetup.categories.map(cat => (
@@ -363,7 +373,10 @@ export default function GameSetupSimple() {
                       <Label className="text-gray-300 mb-2 block">Point Value</Label>
                       <select
                         value={currentQuestion.value}
-                        onChange={(e) => setCurrentQuestion(prev => ({ ...prev, value: parseInt(e.target.value) }))}
+                        onChange={(e) => {
+                          console.log('Value changed to:', e.target.value);
+                          setCurrentQuestion(prev => ({ ...prev, value: parseInt(e.target.value) }));
+                        }}
                         className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
                       >
                         {values.map(val => (
@@ -388,7 +401,10 @@ export default function GameSetupSimple() {
                     <Label className="text-gray-300 mb-2 block">Question Type</Label>
                     <select
                       value={currentQuestion.type}
-                      onChange={(e) => setCurrentQuestion(prev => ({ ...prev, type: e.target.value as any }))}
+                      onChange={(e) => {
+                        console.log('Type changed to:', e.target.value);
+                        setCurrentQuestion(prev => ({ ...prev, type: e.target.value as any }));
+                      }}
                       className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="specific_answer">Specific Answer</option>
@@ -407,6 +423,12 @@ export default function GameSetupSimple() {
                     />
                   </div>
 
+                  <div className="bg-gray-700 p-3 rounded mb-4">
+                    <p className="text-gray-300 text-sm">
+                      Current: {currentQuestion.category} - ${currentQuestion.value} ({currentQuestion.type})
+                    </p>
+                  </div>
+                  
                   <Button onClick={addQuestion} className="w-full bg-green-600 hover:bg-green-700 text-white">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Question
