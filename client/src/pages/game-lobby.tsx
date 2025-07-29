@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
-import { Gamepad, Users, LogIn, Calendar, Clock } from "lucide-react";
+import { Gamepad, Users, LogIn, Calendar, Clock, Crown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import type { Game } from "@shared/schema";
 
@@ -23,6 +24,10 @@ export default function GameLobby() {
     roomCode: "",
     playerName: "",
   });
+
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<GameWithPlayerCount | null>(null);
+  const [joinType, setJoinType] = useState<'host' | 'player'>('player');
 
   // Fetch open games
   const { data: openGames = [], isLoading: isLoadingGames, refetch: refetchGames } = useQuery<GameWithPlayerCount[]>({
@@ -61,23 +66,39 @@ export default function GameLobby() {
     });
   };
 
-  const handleJoinOpenGame = (roomCode: string) => {
-    if (!joinForm.playerName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter your name first",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleJoinOpenGame = (game: GameWithPlayerCount) => {
+    setSelectedGame(game);
+    setShowJoinDialog(true);
+  };
 
-    sendMessage({
-      type: "join_game",
-      data: {
-        roomCode,
-        playerName: joinForm.playerName,
-      },
-    });
+  const handleJoinDialogSubmit = () => {
+    if (!selectedGame) return;
+
+    if (joinType === 'host') {
+      // Navigate to host page with room code
+      navigate(`/host?roomCode=${selectedGame.roomCode}`);
+    } else {
+      // Join as player
+      if (!joinForm.playerName.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter your name first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      sendMessage({
+        type: "join_game",
+        data: {
+          roomCode: selectedGame.roomCode,
+          playerName: joinForm.playerName,
+        },
+      });
+    }
+    
+    setShowJoinDialog(false);
+    setSelectedGame(null);
   };
 
   // Handle WebSocket responses
@@ -275,9 +296,8 @@ export default function GameLobby() {
                       </div>
                     </div>
                     <Button
-                      onClick={() => handleJoinOpenGame(game.roomCode)}
-                      disabled={!joinForm.playerName.trim()}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleJoinOpenGame(game)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4"
                     >
                       <LogIn className="mr-2 w-4 h-4" />
                       Join Game
@@ -289,6 +309,66 @@ export default function GameLobby() {
           )}
         </div>
       </div>
+
+      {/* Join Game Dialog */}
+      <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Join Game: {selectedGame?.gameName}</DialogTitle>
+            <DialogDescription>
+              Room Code: {selectedGame?.roomCode} | Host: {selectedGame?.hostName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              How would you like to join this game?
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant={joinType === 'player' ? 'default' : 'outline'}
+                onClick={() => setJoinType('player')}
+                className="flex flex-col items-center p-4 h-auto"
+              >
+                <Users className="w-6 h-6 mb-2" />
+                <span className="font-medium">As Player</span>
+                <span className="text-xs text-gray-500">Join the game to play</span>
+              </Button>
+              
+              <Button
+                variant={joinType === 'host' ? 'default' : 'outline'}
+                onClick={() => setJoinType('host')}
+                className="flex flex-col items-center p-4 h-auto"
+              >
+                <Crown className="w-6 h-6 mb-2" />
+                <span className="font-medium">As Host</span>
+                <span className="text-xs text-gray-500">Control the game</span>
+              </Button>
+            </div>
+
+            {joinType === 'player' && !joinForm.playerName.trim() && (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  Please enter your name above to join as a player.
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowJoinDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleJoinDialogSubmit}
+              disabled={joinType === 'player' && !joinForm.playerName.trim()}
+            >
+              {joinType === 'host' ? 'Join as Host' : 'Join as Player'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

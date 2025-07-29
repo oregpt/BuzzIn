@@ -56,6 +56,28 @@ export default function GameHost() {
 
   // Initialize from game setup or URL params
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCodeParam = urlParams.get('roomCode');
+    
+    // Check if joining existing game as host
+    if (roomCodeParam) {
+      setGameState(prev => ({
+        ...prev,
+        roomCode: roomCodeParam,
+      }));
+      
+      // Send message to join as host (this will be handled by existing join_game logic)
+      sendMessage({
+        type: "join_game",
+        data: { 
+          roomCode: roomCodeParam, 
+          playerName: "Host", // Will be overridden by server for host role
+          isHost: true 
+        }
+      });
+      return;
+    }
+    
     // Check for game setup data from the new flow
     const gameSetup = localStorage.getItem('gameSetup');
     if (gameSetup) {
@@ -84,7 +106,6 @@ export default function GameHost() {
     }
 
     // Fallback to URL params
-    const urlParams = new URLSearchParams(window.location.search);
     const roomCode = urlParams.get('room');
     const gameId = urlParams.get('game');
     
@@ -276,6 +297,11 @@ export default function GameHost() {
     setShowEndGameConfirm(false);
   };
 
+  const handleExitGame = () => {
+    // Just navigate back to lobby without ending the game
+    navigate("/");
+  };
+
   const firstBuzzer = gameState.buzzerResults.find(b => b.isFirst);
   const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
 
@@ -308,14 +334,24 @@ export default function GameHost() {
                     <span className="ml-2 font-bold text-white">{firstBuzzer.playerName}</span>
                   </div>
                 )}
-                <Button
-                  onClick={handleEndGame}
-                  variant="destructive"
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  <Square className="mr-2 h-4 w-4" />
-                  End Game
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleExitGame}
+                    variant="outline"
+                    className="border-gray-600 text-gray-600 hover:bg-gray-100"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Exit Game
+                  </Button>
+                  <Button
+                    onClick={handleEndGame}
+                    variant="destructive"
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <Square className="mr-2 h-4 w-4" />
+                    End Game
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
