@@ -185,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
             }
 
-            await storage.updateQuestion(question.id, { isUsed: true });
+            // Don't mark as used here - only when explicitly requested
             await storage.updateGame(ws.gameId, { 
               currentQuestionId: question.id,
               status: "active"
@@ -347,6 +347,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             broadcastToGame(ws.gameId, {
               type: "question_closed",
               data: { nextPicker }
+            });
+            break;
+          }
+
+          case 'mark_question_used': {
+            const { questionId } = message.data;
+            if (!ws.gameId) break;
+
+            await storage.updateQuestion(questionId, { isUsed: true });
+            
+            // Notify all players that question is now used
+            broadcastToGame(ws.gameId, {
+              type: "question_marked_used",
+              data: { questionId }
             });
             break;
           }

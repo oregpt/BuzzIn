@@ -5,6 +5,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
 import { Trophy, Users, Pause, Square, Check, X, Star, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DEFAULT_CATEGORIES, VALUES, formatCurrency } from "@/lib/game-data";
 import type { Player, Question } from "@shared/schema";
 
@@ -51,6 +52,7 @@ export default function GameHost() {
 
   const [showQuestion, setShowQuestion] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
 
   // Initialize from game setup or URL params
   useEffect(() => {
@@ -192,6 +194,28 @@ export default function GameHost() {
     setShowAnswer(false); // Reset answer visibility when question closes
   });
 
+  onMessage("question_marked_used", (data) => {
+    // Update local state to mark question as used
+    if (gameState.currentQuestion && data.questionId === gameState.currentQuestion.id) {
+      const questionKey = `${gameState.currentQuestion.category}-${gameState.currentQuestion.value}`;
+      setGameState(prev => ({
+        ...prev,
+        usedQuestions: new Set([...prev.usedQuestions, questionKey])
+      }));
+    }
+  });
+
+  onMessage("game_ended", (data) => {
+    toast({
+      title: "Game Ended",
+      description: "The game has been completed. Final scores displayed.",
+    });
+    // Game ended, navigate back to lobby
+    setTimeout(() => {
+      navigate("/");
+    }, 3000);
+  });
+
   const handleSelectQuestion = (category: string, value: number) => {
     console.log('Selecting question:', { category, value, usedQuestions: [...gameState.usedQuestions] });
     
@@ -229,23 +253,27 @@ export default function GameHost() {
   };
 
   const handleMarkUsed = () => {
-    // Mark the question as used in local state first
+    // Send message to mark question as used on server
     if (gameState.currentQuestion) {
-      const questionKey = `${gameState.currentQuestion.category}-${gameState.currentQuestion.value}`;
-      setGameState(prev => ({
-        ...prev,
-        usedQuestions: new Set([...prev.usedQuestions, questionKey])
-      }));
+      sendMessage({
+        type: "mark_question_used",
+        data: { questionId: gameState.currentQuestion.id }
+      });
     }
     // Then close the question
     handleCloseQuestion();
   };
 
   const handleEndGame = () => {
+    setShowEndGameConfirm(true);
+  };
+
+  const confirmEndGame = () => {
     sendMessage({
       type: "end_game",
       data: {}
     });
+    setShowEndGameConfirm(false);
   };
 
   const firstBuzzer = gameState.buzzerResults.find(b => b.isFirst);
@@ -549,6 +577,32 @@ export default function GameHost() {
           </Card>
         </div>
       )}
+
+      {/* End Game Confirmation Dialog */}
+      <Dialog open={showEndGameConfirm} onOpenChange={setShowEndGameConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>End Game</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to end this game? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowEndGameConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmEndGame}
+            >
+              End Game
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
