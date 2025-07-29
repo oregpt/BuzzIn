@@ -194,7 +194,7 @@ export default function GameHost() {
   });
 
   const handleSelectQuestion = (category: string, value: number) => {
-    console.log('Selecting question:', { category, value, usedQuestions: Array.from(gameState.usedQuestions) });
+    console.log('Selecting question:', { category, value, usedQuestions: [...gameState.usedQuestions] });
     
     sendMessage({
       type: "select_question",
@@ -404,7 +404,7 @@ export default function GameHost() {
                       <span className="font-bold text-blue-600 dark:text-yellow-400 mr-3">
                         {String.fromCharCode(65 + index)}.
                       </span>
-                      <span className="text-black dark:text-white">{option}</span>
+                      <span className="text-black dark:text-white">{option as string}</span>
                     </div>
                   ))}
                 </div>
