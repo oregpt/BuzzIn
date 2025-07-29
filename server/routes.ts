@@ -146,10 +146,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             // Validate player code if provided
             if (playerCode && playerCode !== game.playerCode) {
-              sendToPlayer(ws.playerId || '', {
+              console.log('Invalid player code. Expected:', game.playerCode, 'Received:', playerCode);
+              ws.send(JSON.stringify({
                 type: "error",
                 data: { message: "Invalid player code" }
-              });
+              }));
               break;
             }
 
@@ -176,7 +177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "game_joined",
               data: { playerId: player.id, gameId: game.id, players: allPlayers }
             };
-            sendToPlayer(player.id, joinResponse);
+            console.log('Sending game_joined response to player:', player.id);
+            ws.send(JSON.stringify(joinResponse));
 
             broadcastToGame(game.id, {
               type: "player_joined",
@@ -187,22 +189,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           case 'join_as_host': {
             const { roomCode, hostCode } = message.data;
+            console.log('Join as host request:', { roomCode, hostCode });
             const game = await storage.getGameByRoomCode(roomCode);
             
             if (!game) {
-              sendToPlayer(ws.playerId || '', {
+              console.log('Game not found for room code:', roomCode);
+              ws.send(JSON.stringify({
                 type: "error",
                 data: { message: "Game not found" }
-              });
+              }));
               break;
             }
 
             // Validate host code
             if (hostCode !== game.hostCode) {
-              sendToPlayer(ws.playerId || '', {
+              console.log('Invalid host code. Expected:', game.hostCode, 'Received:', hostCode);
+              ws.send(JSON.stringify({
                 type: "error",
                 data: { message: "Invalid host code" }
-              });
+              }));
               break;
             }
 
@@ -235,7 +240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "game_joined",
               data: { playerId: hostPlayer.id, gameId: game.id, players: allPlayers }
             };
-            sendToPlayer(hostPlayer.id, joinResponse);
+            console.log('Sending game_joined response to host:', hostPlayer.id);
+            ws.send(JSON.stringify(joinResponse));
 
             broadcastToGame(game.id, {
               type: "host_joined",

@@ -289,7 +289,7 @@ export default function GameLobby() {
                   placeholder="Enter your name"
                   value={joinForm.playerName}
                   onChange={(e) => setJoinForm(prev => ({ ...prev, playerName: e.target.value }))}
-                  className="w-full"
+                  className="w-full bg-white dark:bg-gray-800 text-black dark:text-white border-gray-300 dark:border-gray-600"
                 />
               </div>
             )}
@@ -305,7 +305,7 @@ export default function GameLobby() {
                 placeholder={`Enter ${joinType} code`}
                 value={authCode}
                 onChange={(e) => setAuthCode(e.target.value)}
-                className="w-full"
+                className="w-full bg-white dark:bg-gray-800 text-black dark:text-white border-gray-300 dark:border-gray-600"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {joinType === 'host' 
