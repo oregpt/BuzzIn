@@ -49,6 +49,8 @@ export default function GameSetupSimple() {
     options: null
   });
 
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
+
   // No need to load basic info from localStorage since we removed the pre-form
 
   const generateCode = (length: number) => {
@@ -131,15 +133,16 @@ export default function GameSetupSimple() {
       questions: [...prev.questions, question]
     }));
 
-    // Reset form but keep category and value selections
-    setCurrentQuestion(prev => ({
-      category: prev.category,
-      value: prev.value,
+    // Reset form and close modal
+    setCurrentQuestion({
+      category: "HISTORY",
+      value: 100,
       question: "",
       type: 'specific_answer',
       correctAnswer: "",
       options: null
-    }));
+    });
+    setShowQuestionForm(false);
 
     toast({
       title: "Question Added",
@@ -328,102 +331,125 @@ export default function GameSetupSimple() {
           </Card>
         )}
 
-        {/* Step 4: Questions */}
+        {/* Step 4: Questions - Board Interface */}
         {step === 'questions' && (
           <div className="space-y-6">
+            {/* Game Board */}
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-2xl text-white">Add Questions</CardTitle>
-                <p className="text-gray-400">
-                  Current questions: {gameSetup.questions.length} | 
-                  Target: {gameSetup.categories.length * 5} questions
+                <CardTitle className="text-2xl text-white text-center">Question Board</CardTitle>
+                <p className="text-gray-400 text-center">
+                  Click on a tile to create a question | {gameSetup.questions.length} questions created
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-gray-300 mb-2 block">Category</Label>
-                      <select
-                        value={currentQuestion.category}
-                        onChange={(e) => {
-                          console.log('Category changed to:', e.target.value);
-                          setCurrentQuestion(prev => ({ ...prev, category: e.target.value }));
-                        }}
-                        className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
-                      >
-                        {gameSetup.categories.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
+                <div className="grid grid-cols-6 gap-2">
+                  {/* Header row with categories */}
+                  {gameSetup.categories.map((category, categoryIndex) => (
+                    <div key={category} className="bg-blue-700 text-white p-3 text-center font-bold text-sm rounded">
+                      {category}
                     </div>
-                    <div>
-                      <Label className="text-gray-300 mb-2 block">Point Value</Label>
-                      <select
-                        value={currentQuestion.value}
-                        onChange={(e) => {
-                          console.log('Value changed to:', e.target.value);
-                          setCurrentQuestion(prev => ({ ...prev, value: parseInt(e.target.value) }));
-                        }}
-                        className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
-                      >
-                        {values.map(val => (
-                          <option key={val} value={val}>${val}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                  ))}
                   
-                  <div>
-                    <Label className="text-gray-300 mb-2 block">Question</Label>
-                    <textarea
-                      value={currentQuestion.question || ''}
-                      onChange={(e) => setCurrentQuestion(prev => ({ ...prev, question: e.target.value }))}
-                      placeholder="Enter your question here..."
-                      className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-gray-300 mb-2 block">Question Type</Label>
-                    <select
-                      value={currentQuestion.type}
-                      onChange={(e) => {
-                        console.log('Type changed to:', e.target.value);
-                        setCurrentQuestion(prev => ({ ...prev, type: e.target.value as any }));
-                      }}
-                      className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="specific_answer">Specific Answer</option>
-                      <option value="true_false">True/False</option>
-                      <option value="multiple_choice">Multiple Choice</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <Label className="text-gray-300 mb-2 block">Correct Answer</Label>
-                    <input
-                      value={currentQuestion.correctAnswer || ''}
-                      onChange={(e) => setCurrentQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
-                      placeholder="Enter the correct answer"
-                      className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="bg-gray-700 p-3 rounded mb-4">
-                    <p className="text-gray-300 text-sm">
-                      Current: {currentQuestion.category} - ${currentQuestion.value} ({currentQuestion.type})
-                    </p>
-                  </div>
-                  
-                  <Button onClick={addQuestion} className="w-full bg-green-600 hover:bg-green-700 text-white">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Question
-                  </Button>
+                  {/* Question tiles */}
+                  {values.map((value) => (
+                    gameSetup.categories.map((category, categoryIndex) => {
+                      const hasQuestion = gameSetup.questions.some(q => q.category === category && q.value === value);
+                      return (
+                        <button
+                          key={`${category}-${value}`}
+                          onClick={() => {
+                            setCurrentQuestion(prev => ({ 
+                              ...prev, 
+                              category: category, 
+                              value: value,
+                              question: "",
+                              correctAnswer: "",
+                              type: 'specific_answer'
+                            }));
+                            setShowQuestionForm(true);
+                          }}
+                          className={`p-4 rounded font-bold text-lg transition-all duration-200 hover:scale-105 ${
+                            hasQuestion 
+                              ? 'bg-green-600 text-white' 
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          ${value}
+                        </button>
+                      );
+                    })
+                  ))}
                 </div>
               </CardContent>
             </Card>
+
+            {/* Question Form Modal */}
+            {showQuestionForm && (
+              <Card className="bg-gray-800 border-gray-700 border-2 border-blue-500">
+                <CardHeader>
+                  <CardTitle className="text-xl text-white">
+                    Create Question: {currentQuestion.category} - ${currentQuestion.value}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-gray-300 mb-2 block">Question</Label>
+                      <textarea
+                        value={currentQuestion.question || ''}
+                        onChange={(e) => setCurrentQuestion(prev => ({ ...prev, question: e.target.value }))}
+                        placeholder="Enter your question here..."
+                        className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-300 mb-2 block">Question Type</Label>
+                      <select
+                        value={currentQuestion.type}
+                        onChange={(e) => {
+                          setCurrentQuestion(prev => ({ ...prev, type: e.target.value as any }));
+                        }}
+                        className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="specific_answer">Specific Answer</option>
+                        <option value="true_false">True/False</option>
+                        <option value="multiple_choice">Multiple Choice</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-300 mb-2 block">Correct Answer</Label>
+                      <input
+                        value={currentQuestion.correctAnswer || ''}
+                        onChange={(e) => setCurrentQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                        placeholder="Enter the correct answer"
+                        className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={addQuestion} 
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Save Question
+                      </Button>
+                      <Button 
+                        onClick={() => setShowQuestionForm(false)}
+                        variant="outline" 
+                        className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {gameSetup.questions.length >= gameSetup.categories.length * 3 && (
               <Card className="bg-blue-800 border-blue-700">

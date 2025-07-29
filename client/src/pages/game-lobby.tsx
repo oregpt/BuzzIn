@@ -68,11 +68,11 @@ export default function GameLobby() {
   });
 
   return (
-    <div className="min-h-screen bg-game-dark text-gray-100">
+    <div className="min-h-screen bg-gray-900 text-gray-100">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <header className="text-center mb-12">
-          <h1 className="font-game text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-game-secondary to-yellow-400 mb-4">
+          <h1 className="font-game text-5xl md:text-7xl font-black text-yellow-400 mb-4">
             JEOPARDY!
           </h1>
           <p className="text-xl text-gray-300 font-medium">Multiplayer Quiz Experience</p>
@@ -91,9 +91,9 @@ export default function GameLobby() {
         {/* Main Action Cards */}
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
           {/* Setup New Game */}
-          <Card className="bg-game-surface border-border-game-gray game-card-hover">
+          <Card className="bg-gray-800 border-gray-700 game-card-hover">
             <CardHeader className="text-center pb-4">
-              <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-game-accent to-emerald-600 rounded-full flex items-center justify-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center">
                 <Gamepad className="w-8 h-8 text-white" />
               </div>
               <CardTitle className="text-xl font-bold text-white">Setup Game</CardTitle>
@@ -102,7 +102,7 @@ export default function GameLobby() {
             <CardContent>
               <Button
                 onClick={handleSetupGame}
-                className="w-full bg-gradient-to-r from-game-accent to-emerald-600 hover:from-emerald-600 hover:to-game-accent text-white font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-emerald-600 hover:to-green-600 text-white font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
               >
                 <Gamepad className="mr-2" />
                 Setup Game
@@ -111,9 +111,9 @@ export default function GameLobby() {
           </Card>
 
           {/* Join as Host */}
-          <Card className="bg-game-surface border-border-game-gray game-card-hover">
+          <Card className="bg-gray-800 border-gray-700 game-card-hover">
             <CardHeader className="text-center pb-4">
-              <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-game-primary to-blue-600 rounded-full flex items-center justify-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
                 <Users className="w-8 h-8 text-white" />
               </div>
               <CardTitle className="text-xl font-bold text-white">Join as Host</CardTitle>
@@ -122,7 +122,7 @@ export default function GameLobby() {
             <CardContent>
               <Button
                 onClick={handleJoinAsHost}
-                className="w-full bg-gradient-to-r from-game-primary to-blue-600 hover:from-blue-600 hover:to-game-primary text-white font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
               >
                 <Users className="mr-2" />
                 Join as Host
@@ -131,9 +131,9 @@ export default function GameLobby() {
           </Card>
 
           {/* Join as Participant */}
-          <Card className="bg-game-surface border-border-game-gray game-card-hover">
+          <Card className="bg-gray-800 border-gray-700 game-card-hover">
             <CardHeader className="text-center pb-4">
-              <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-game-secondary to-yellow-500 rounded-full flex items-center justify-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
                 <LogIn className="w-8 h-8 text-white" />
               </div>
               <CardTitle className="text-xl font-bold text-white">Join as Participant</CardTitle>
@@ -141,7 +141,7 @@ export default function GameLobby() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleJoinGame} className="space-y-4">
-                <Input
+                <input
                   type="text"
                   placeholder="ABCD"
                   maxLength={4}
@@ -149,20 +149,20 @@ export default function GameLobby() {
                   onChange={(e) =>
                     setJoinForm({ ...joinForm, roomCode: e.target.value.toUpperCase() })
                   }
-                  className="w-full px-4 py-3 bg-game-dark border-border-game-gray text-white text-center text-2xl font-game tracking-widest focus:ring-2 focus:ring-game-secondary focus:border-transparent uppercase"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white text-center text-2xl font-game tracking-widest focus:ring-2 focus:ring-yellow-500 focus:border-transparent uppercase rounded placeholder-gray-400"
                 />
-                <Input
+                <input
                   type="text"
                   placeholder="Your Team Name"
                   value={joinForm.playerName}
                   onChange={(e) =>
                     setJoinForm({ ...joinForm, playerName: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-game-dark border-border-game-gray text-white focus:ring-2 focus:ring-game-secondary focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent rounded placeholder-gray-400"
                 />
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-game-secondary to-yellow-500 hover:from-yellow-500 hover:to-game-secondary text-game-dark font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
+                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-gray-900 font-bold py-4 px-6 transition-all duration-200 transform hover:scale-105"
                 >
                   <LogIn className="mr-2" />
                   Join Game
