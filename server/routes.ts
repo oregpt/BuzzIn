@@ -48,8 +48,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         switch (message.type) {
           case 'create_game': {
+            console.log('Processing create_game message:', message.data);
             const { gameName, hostName, categories } = message.data;
             const roomCode = await storage.generateRoomCode();
+            console.log('Generated room code:', roomCode);
             
             const game = await storage.createGame({
               roomCode,
@@ -59,6 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status: "waiting",
               currentQuestionId: null,
             });
+            console.log('Created game:', game);
 
             // Check if we have custom questions from setup
             const gameSetupStr = message.data.gameSetup;
@@ -367,9 +370,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
+        console.error('Error stack:', (error as Error)?.stack);
         sendToPlayer(ws.playerId || '', {
           type: "error",
-          data: { message: "Invalid message format" }
+          data: { message: "Server error: " + (error as Error)?.message || "Unknown error" }
         });
       }
     });
