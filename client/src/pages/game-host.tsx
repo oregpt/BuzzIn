@@ -245,7 +245,7 @@ export default function GameHost() {
 
               {/* Question Cards */}
               {VALUES.map(value => 
-                CATEGORIES.map(category => {
+                DEFAULT_CATEGORIES.map(category => {
                   const questionKey = `${category}-${value}`;
                   const isUsed = gameState.usedQuestions.has(questionKey);
                   
