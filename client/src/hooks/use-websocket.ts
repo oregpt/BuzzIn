@@ -60,6 +60,16 @@ export function useWebSocket() {
       ws.current.send(JSON.stringify(message));
     } else {
       console.warn('WebSocket is not connected, readyState:', ws.current?.readyState);
+      // Queue the message to be sent when connection opens
+      if (ws.current && ws.current.readyState === WebSocket.CONNECTING) {
+        const queuedSend = () => {
+          if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            console.log('Sending queued WebSocket message:', message);
+            ws.current.send(JSON.stringify(message));
+          }
+        };
+        ws.current.addEventListener('open', queuedSend, { once: true });
+      }
     }
   }, []);
 
