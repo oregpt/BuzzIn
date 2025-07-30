@@ -83,6 +83,7 @@ export default function GamePlayer() {
         playerName: currentPlayer.name,
         score: currentPlayer.score,
         otherPlayers: data.players.filter((p: Player) => p.id !== playerState.playerId),
+        gameStatus: "Game ready! Waiting for host to select first question...",
       }));
     }
   });
@@ -187,6 +188,27 @@ export default function GamePlayer() {
 
   onMessage("game_ended", () => {
     navigate('/results');
+  });
+
+  onMessage("game_reset", (data) => {
+    setPlayerState(prev => ({
+      ...prev,
+      score: 0,
+      currentQuestion: null,
+      gameStatus: "Game reset! Waiting for host to select first question...",
+      hasSubmitted: false,
+      answer: "",
+      timeRemaining: 0,
+      questionStartTime: null,
+      showResults: false,
+      submittedAnswers: [],
+      otherPlayers: data.players.filter((p: Player) => p.id !== playerState.playerId),
+    }));
+    
+    toast({
+      title: "Game Reset",
+      description: "All scores have been reset. Ready to play again!",
+    });
   });
 
   // Timer effect for countdown
