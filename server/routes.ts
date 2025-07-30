@@ -55,25 +55,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Extract codes from gameSetup if provided
             let roomCode: string;
             let hostCode: string;
-            let playerCode: string;
             
             if (gameSetupStr) {
               try {
                 const gameSetup = JSON.parse(gameSetupStr);
                 roomCode = gameSetup.roomCode || await storage.generateRoomCode();
                 hostCode = gameSetup.adminCode || storage.generateAuthCode();
-                playerCode = gameSetup.playerCode || storage.generateAuthCode();
-                console.log('Using codes from setup - Room:', roomCode, 'Host:', hostCode, 'Player:', playerCode);
+
+                console.log('Using codes from setup - Room:', roomCode, 'Host:', hostCode);
               } catch (e) {
                 console.log('Failed to parse gameSetup, generating new codes');
                 roomCode = await storage.generateRoomCode();
                 hostCode = storage.generateAuthCode();
-                playerCode = storage.generateAuthCode();
               }
             } else {
               roomCode = await storage.generateRoomCode();
               hostCode = storage.generateAuthCode();
-              playerCode = storage.generateAuthCode();
             }
             
             const game = await storage.createGame({
@@ -84,7 +81,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status: "waiting",
               currentQuestionId: null,
               hostCode,
-              playerCode,
             });
             console.log('Created game:', game);
 
@@ -143,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 roomCode, 
                 gameId: game.id,
                 hostCode: game.hostCode,
-                playerCode: game.playerCode
+
               }
             };
             console.log('Response being sent:', response);
@@ -152,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           case 'join_game': {
-            const { roomCode, playerName, playerCode } = message.data;
+            const { roomCode, playerName } = message.data;
             const game = await storage.getGameByRoomCode(roomCode);
             
             if (!game) {
@@ -160,16 +156,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 type: "error",
                 data: { message: "Game not found" }
               });
-              break;
-            }
-
-            // Validate player code if provided
-            if (playerCode && playerCode !== game.playerCode) {
-              console.log('Invalid player code. Expected:', game.playerCode, 'Received:', playerCode);
-              ws.send(JSON.stringify({
-                type: "error",
-                data: { message: "Invalid player code" }
-              }));
               break;
             }
 

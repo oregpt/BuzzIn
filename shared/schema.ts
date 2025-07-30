@@ -19,7 +19,7 @@ export const games = pgTable("games", {
   currentQuestionId: varchar("current_question_id"),
   lastCorrectPlayerId: varchar("last_correct_player_id"), // Who gets to pick next
   hostCode: varchar("host_code", { length: 6 }).notNull(), // Host authentication code
-  playerCode: varchar("player_code", { length: 6 }).notNull(), // Player authentication code
+
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -109,7 +109,7 @@ export type GameAnswer = typeof gameAnswers.$inferSelect;
 
 // WebSocket message types
 export type WSMessage = 
-  | { type: "join_game"; data: { roomCode: string; playerName: string; playerCode?: string } }
+  | { type: "join_game"; data: { roomCode: string; playerName: string } }
   | { type: "join_as_host"; data: { roomCode: string; hostCode: string } }
   | { type: "create_game"; data: { gameName: string; hostName: string; categories?: string[]; gameSetup?: string } }
   | { type: "select_question"; data: { category: string; value: number; selectedBy?: string } }
@@ -121,7 +121,7 @@ export type WSMessage =
   | { type: "end_game"; data: {} };
 
 export type WSResponse = 
-  | { type: "game_created"; data: { roomCode: string; gameId: string; hostCode: string; playerCode: string } }
+  | { type: "game_created"; data: { roomCode: string; gameId: string; hostCode: string } }
   | { type: "game_joined"; data: { playerId: string; gameId: string; players: Player[] } }
   | { type: "player_joined"; data: { player: Player } }
   | { type: "host_joined"; data: { player: Player } }

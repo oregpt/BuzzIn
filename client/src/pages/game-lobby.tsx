@@ -88,8 +88,7 @@ export default function GameLobby() {
         type: "join_game",
         data: {
           roomCode: selectedGame.roomCode,
-          playerName: joinForm.playerName,
-          playerCode: authCode.trim()
+          playerName: joinForm.playerName
         },
       });
     }
@@ -308,26 +307,25 @@ export default function GameLobby() {
               </div>
             )}
 
-            {/* Auth Code Input */}
-            <div className="space-y-2">
-              <Label htmlFor="authCode" className="text-gray-300 mb-2 block">
-                {joinType === 'host' ? 'Host Code' : 'Player Code'}
-              </Label>
-              <input
-                id="authCode"
-                type="password"
-                placeholder={`Enter ${joinType} code`}
-                value={authCode}
-                onChange={(e) => setAuthCode(e.target.value)}
-                className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-400">
-                {joinType === 'host' 
-                  ? 'Enter the host code to control this game' 
-                  : 'Enter the player code to join this game'
-                }
-              </p>
-            </div>
+            {/* Auth Code Input (only for host) */}
+            {joinType === 'host' && (
+              <div className="space-y-2">
+                <Label htmlFor="authCode" className="text-gray-300 mb-2 block">
+                  Host Code
+                </Label>
+                <input
+                  id="authCode"
+                  type="password"
+                  placeholder="Enter host code"
+                  value={authCode}
+                  onChange={(e) => setAuthCode(e.target.value)}
+                  className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-400">
+                  Enter the host code to control this game
+                </p>
+              </div>
+            )}
           </div>
           
           <DialogFooter>
@@ -341,7 +339,7 @@ export default function GameLobby() {
             <Button 
               onClick={handleJoinDialogSubmit}
               disabled={
-                !authCode.trim() || 
+                (joinType === 'host' && !authCode.trim()) || 
                 (joinType === 'player' && !joinForm.playerName.trim())
               }
               className="bg-blue-600 hover:bg-blue-700 text-white"
