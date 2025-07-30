@@ -54,17 +54,17 @@ export default function GameLobby() {
   const handleJoinDialogSubmit = () => {
     if (!selectedGame) return;
 
-    // Validate auth code is entered
-    if (!authCode.trim()) {
-      toast({
-        title: "Error",
-        description: `Please enter the ${joinType} code`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (joinType === 'host') {
+      // Validate auth code is entered for host
+      if (!authCode.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter the host code",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Send message to verify host code and join as host
       sendMessage({
         type: "join_as_host",
@@ -74,7 +74,7 @@ export default function GameLobby() {
         },
       });
     } else {
-      // Join as player with player code
+      // Join as player - only need name
       if (!joinForm.playerName.trim()) {
         toast({
           title: "Error",
@@ -107,7 +107,7 @@ export default function GameLobby() {
   onMessage("game_joined", (data) => {
     console.log('Game joined successfully:', data);
     // Check if the joined player is a host based on the player data
-    const isHost = data.players?.find(p => p.id === data.playerId)?.isHost;
+    const isHost = data.players?.find((p: any) => p.id === data.playerId)?.isHost;
     if (isHost) {
       navigate("/host");
     } else {

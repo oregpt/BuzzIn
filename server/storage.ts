@@ -152,7 +152,7 @@ export class MemStorage implements IStorage {
       currentQuestionId: insertGame.currentQuestionId || null,
       lastCorrectPlayerId: null,
       hostCode: insertGame.hostCode || this.generateAuthCode(),
-      playerCode: insertGame.playerCode || this.generateAuthCode(),
+
       createdAt: new Date(),
     };
     this.games.set(id, game);
