@@ -230,45 +230,45 @@ export default function GamePlayer() {
   };
 
   return (
-    <div className="min-h-screen bg-game-dark text-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-6 max-w-lg">
         {/* Player Header */}
-        <Card className="bg-game-surface border-border-game-gray mb-6 text-center">
+        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg mb-6 text-center">
           <CardContent className="pt-6">
-            <h1 className="font-game text-2xl font-bold text-game-secondary mb-2">
+            <h1 className="font-game text-2xl font-bold text-blue-600 dark:text-yellow-400 mb-2">
               ROOM: {playerState.roomCode}
             </h1>
-            <div className="text-white text-lg font-bold">{playerState.playerName}</div>
-            <div className="text-game-accent text-2xl font-game font-bold">
+            <div className="text-gray-900 dark:text-white text-lg font-bold">{playerState.playerName}</div>
+            <div className="text-green-600 dark:text-green-400 text-2xl font-game font-bold">
               {formatCurrency(playerState.score)}
             </div>
           </CardContent>
         </Card>
 
         {/* Game Status */}
-        <Card className="bg-game-surface border-border-game-gray mb-6 text-center">
+        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg mb-6 text-center">
           <CardContent className="pt-6">
-            <div className="text-gray-300 text-sm mb-2">Current Status</div>
+            <div className="text-gray-600 dark:text-gray-300 text-sm mb-2">Current Status</div>
             {playerState.currentQuestion && (
-              <div className="text-white text-lg font-bold mb-2">
+              <div className="text-gray-900 dark:text-white text-lg font-bold mb-2">
                 {playerState.currentQuestion.category} - {formatCurrency(playerState.currentQuestion.value)}
               </div>
             )}
-            <div className="text-gray-300 text-sm">{playerState.gameStatus}</div>
+            <div className="text-gray-600 dark:text-gray-300 text-sm">{playerState.gameStatus}</div>
           </CardContent>
         </Card>
 
         {/* Timer */}
         {playerState.currentQuestion && !playerState.hasSubmitted && (
-          <Card className="bg-game-surface border-border-game-gray mb-6">
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg mb-6">
             <CardContent className="pt-6 text-center">
-              <div className="text-gray-300 text-sm mb-2">Time Remaining</div>
+              <div className="text-gray-600 dark:text-gray-300 text-sm mb-2">Time Remaining</div>
               <div className={`text-6xl font-bold font-game ${
                 playerState.timeRemaining <= 5 ? 'text-red-500 animate-pulse' : 'text-green-500'
               }`}>
                 {Math.ceil(playerState.timeRemaining)}
               </div>
-              <div className="w-full bg-gray-700 rounded-full h-2 mt-4">
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-4">
                 <div 
                   className={`h-2 rounded-full transition-all duration-100 ${
                     playerState.timeRemaining <= 5 ? 'bg-red-500' : 'bg-green-500'
@@ -282,13 +282,13 @@ export default function GamePlayer() {
 
         {/* Question Display */}
         {playerState.currentQuestion && (
-          <Card className="bg-game-surface border-border-game-gray mb-6">
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg mb-6">
             <CardContent className="pt-6">
               <div className="text-center mb-4">
-                <div className="text-game-secondary text-lg font-bold mb-2">
+                <div className="text-blue-600 dark:text-yellow-400 text-lg font-bold mb-2">
                   {playerState.currentQuestion.category} - {formatCurrency(playerState.currentQuestion.value)}
                 </div>
-                <div className="text-white text-lg">
+                <div className="text-gray-900 dark:text-white text-lg">
                   {playerState.currentQuestion.question}
                 </div>
               </div>
@@ -304,8 +304,8 @@ export default function GamePlayer() {
                           onClick={() => setPlayerState(prev => ({ ...prev, answer: String.fromCharCode(65 + index) }))}
                           className={`w-full justify-start ${
                             playerState.answer === String.fromCharCode(65 + index)
-                              ? 'bg-game-primary border-game-secondary'
-                              : 'bg-gray-700 hover:bg-gray-600'
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
                         >
                           {String.fromCharCode(65 + index)}. {option}
@@ -340,7 +340,7 @@ export default function GamePlayer() {
                       value={playerState.answer}
                       onChange={(e) => setPlayerState(prev => ({ ...prev, answer: e.target.value }))}
                       placeholder="Type your answer here..."
-                      className="bg-gray-700 border-gray-600 text-white"
+                      className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                       rows={3}
                     />
                   )}
@@ -348,7 +348,7 @@ export default function GamePlayer() {
                   <Button
                     onClick={handleSubmitAnswer}
                     disabled={playerState.timeRemaining <= 0}
-                    className="w-full bg-game-primary hover:bg-game-primary/80 text-white font-bold py-4 text-lg"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 text-lg"
                   >
                     Submit Answer
                   </Button>
@@ -368,10 +368,10 @@ export default function GamePlayer() {
 
         {/* Answer Submitted Feedback */}
         {playerState.hasSubmitted && (
-          <Card className="bg-game-primary mb-6 text-center">
+          <Card className="bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-700 mb-6 text-center">
             <CardContent className="pt-4">
-              <div className="text-white text-lg font-bold">Answer submitted!</div>
-              <div className="text-gray-300 text-sm">
+              <div className="text-green-800 dark:text-green-200 text-lg font-bold">Answer submitted!</div>
+              <div className="text-green-600 dark:text-green-300 text-sm">
                 Waiting for host to review answers...
               </div>
             </CardContent>

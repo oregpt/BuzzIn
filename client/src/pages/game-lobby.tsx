@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
-import { Gamepad, Users, LogIn, Calendar, Clock, Crown } from "lucide-react";
+import { Gamepad, Users, LogIn, Calendar, Clock, Crown, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import type { Game } from "@shared/schema";
 
 interface GameWithPlayerCount extends Game {
@@ -19,6 +20,7 @@ export default function GameLobby() {
   const [, navigate] = useLocation();
   const { sendMessage, onMessage, isConnected } = useWebSocket();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [joinForm, setJoinForm] = useState({
     roomCode: "",
@@ -29,6 +31,10 @@ export default function GameLobby() {
   const [selectedGame, setSelectedGame] = useState<GameWithPlayerCount | null>(null);
   const [joinType, setJoinType] = useState<'host' | 'player'>('player');
   const [authCode, setAuthCode] = useState('');
+  
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [gameToDelete, setGameToDelete] = useState<GameWithPlayerCount | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
 
   // Fetch open games
   const { data: openGames = [], isLoading: isLoadingGames, refetch: refetchGames } = useQuery<GameWithPlayerCount[]>({
@@ -36,6 +42,51 @@ export default function GameLobby() {
     refetchInterval: 5000, // Refresh every 5 seconds
     staleTime: 3000,
   });
+
+  // Delete game mutation
+  const deleteGameMutation = useMutation({
+    mutationFn: (gameId: string) => apiRequest(`/api/games/${gameId}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/open-games'] });
+      toast({
+        title: "Game Deleted",
+        description: "The game has been successfully deleted.",
+      });
+      setShowDeleteDialog(false);
+      setGameToDelete(null);
+      setDeletePassword('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete game",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteGame = (game: GameWithPlayerCount) => {
+    setGameToDelete(game);
+    setDeletePassword('');
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletePassword !== '0000') {
+      toast({
+        title: "Invalid Password",
+        description: "Incorrect admin password entered.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (gameToDelete) {
+      deleteGameMutation.mutate(gameToDelete.id);
+    }
+  };
 
   const handleSetupGame = () => {
     // Direct navigation to setup - no form needed
@@ -189,9 +240,20 @@ export default function GameLobby() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {openGames.map((game) => (
-                <Card key={game.id} className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:shadow-lg transition-shadow">
+                <Card key={game.id} className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:shadow-lg transition-shadow relative">
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteGame(game);
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 w-8 h-8 p-0 z-10"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                   <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start pr-8">
                       <div>
                         <CardTitle className="text-lg font-bold text-black dark:text-white">{game.gameName}</CardTitle>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Host: {game.hostName}</p>
@@ -348,6 +410,54 @@ export default function GameLobby() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {joinType === 'host' ? 'Join as Host' : 'Join as Player'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Game Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900 dark:text-white text-xl">Delete Game</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-300">
+              Are you sure you want to delete "{gameToDelete?.gameName}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="deletePassword" className="text-gray-700 dark:text-gray-300">
+                Site Admin Password
+              </Label>
+              <Input
+                id="deletePassword"
+                type="password"
+                placeholder="Enter admin password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Admin access required to delete games
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmDelete}
+              disabled={!deletePassword.trim() || deleteGameMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteGameMutation.isPending ? 'Deleting...' : 'Delete Game'}
             </Button>
           </DialogFooter>
         </DialogContent>

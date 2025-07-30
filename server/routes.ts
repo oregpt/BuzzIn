@@ -671,6 +671,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete game endpoint
+  app.delete('/api/games/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({ error: 'Game ID is required' });
+      }
+
+      const success = await storage.deleteGame(id);
+      
+      if (success) {
+        res.json({ message: 'Game deleted successfully' });
+      } else {
+        res.status(404).json({ error: 'Game not found' });
+      }
+    } catch (error) {
+      console.error('Error deleting game:', error);
+      res.status(500).json({ error: 'Failed to delete game' });
+    }
+  });
+
   // REST API endpoint for updating questions
   app.put('/api/questions/:id', async (req, res) => {
     try {
