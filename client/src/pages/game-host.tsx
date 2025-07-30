@@ -62,6 +62,7 @@ export default function GameHost() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showScores, setShowScores] = useState(false);
 
   // Initialize from game setup or URL params
   useEffect(() => {
@@ -529,6 +530,14 @@ export default function GameHost() {
                 )}
                 <div className="flex gap-2">
                   <Button
+                    onClick={() => setShowScores(true)}
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900"
+                  >
+                    <Trophy className="mr-2 h-4 w-4" />
+                    View Scores
+                  </Button>
+                  <Button
                     onClick={handleExitGame}
                     variant="outline"
                     className="border-gray-600 text-gray-600 hover:bg-gray-100"
@@ -930,6 +939,51 @@ export default function GameHost() {
               className="bg-orange-600 hover:bg-orange-700 text-white"
             >
               Reset Game
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Current Scores Dialog */}
+      <Dialog open={showScores} onOpenChange={setShowScores}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
+              Current Scores
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {sortedPlayers.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No players have joined yet</p>
+            ) : (
+              sortedPlayers.map((player, index) => (
+                <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="flex items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 ${
+                      index === 0 ? 'bg-yellow-500 text-white' :
+                      index === 1 ? 'bg-gray-400 text-white' :
+                      index === 2 ? 'bg-orange-500 text-white' :
+                      'bg-gray-300 text-gray-700'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <span className="font-medium">{player.name}</span>
+                  </div>
+                  <span className={`font-bold text-lg ${
+                    player.score > 0 ? 'text-green-600' :
+                    player.score < 0 ? 'text-red-600' :
+                    'text-gray-600'
+                  }`}>
+                    {formatCurrency(player.score)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowScores(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
