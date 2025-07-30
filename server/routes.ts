@@ -48,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('message', async (data) => {
       try {
         const message: WSMessage = JSON.parse(data.toString());
-        console.log('Received message:', message.type, message.data);
+        console.log('Received message:', message.type, message.data, 'from playerId:', ws.playerId, 'gameId:', ws.gameId);
 
         switch (message.type) {
           case 'create_game': {
@@ -287,7 +287,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           case 'select_question': {
             const { category, value, selectedBy } = message.data;
-            if (!ws.gameId) break;
+            console.log('Processing select_question:', { category, value, gameId: ws.gameId, playerId: ws.playerId });
+            if (!ws.gameId) {
+              console.log('No gameId found for this WebSocket connection');
+              break;
+            }
 
             const questions = await storage.getQuestionsByGameId(ws.gameId);
             const question = questions.find(q => 
@@ -516,7 +520,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           case 'mark_answer': {
             const { playerId, isCorrect, acceptClose } = message.data;
-            if (!ws.gameId) break;
+            console.log('Processing mark_answer:', { playerId, isCorrect, gameId: ws.gameId });
+            if (!ws.gameId) {
+              console.log('No gameId found for mark_answer');
+              break;
+            }
 
             const game = await storage.getGame(ws.gameId);
             const player = await storage.getPlayer(playerId);
@@ -591,7 +599,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           case 'end_game': {
-            if (!ws.gameId) break;
+            console.log('Processing end_game:', { gameId: ws.gameId, playerId: ws.playerId });
+            if (!ws.gameId) {
+              console.log('No gameId found for end_game');
+              break;
+            }
 
             const players = await storage.getPlayersByGameId(ws.gameId);
             const sortedPlayers = players
