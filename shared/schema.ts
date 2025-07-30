@@ -112,6 +112,7 @@ export type WSMessage =
   | { type: "join_game"; data: { roomCode: string; playerName: string } }
   | { type: "join_as_host"; data: { roomCode: string; hostCode: string } }
   | { type: "create_game"; data: { gameName: string; hostName: string; categories?: string[]; gameSetup?: string } }
+  | { type: "get_game_state"; data: { gameId: string } }
   | { type: "select_question"; data: { category: string; value: number; selectedBy?: string } }
   | { type: "buzz"; data: { questionId: string } }
   | { type: "submit_answer"; data: { questionId: string; answer: string } }
@@ -123,6 +124,7 @@ export type WSMessage =
 export type WSResponse = 
   | { type: "game_created"; data: { roomCode: string; gameId: string; hostCode: string } }
   | { type: "game_joined"; data: { playerId: string; gameId: string; players: Player[]; roomCode?: string } }
+  | { type: "game_state_loaded"; data: { questions: Question[]; game: Game; categories: string[] } }
   | { type: "player_joined"; data: { player: Player } }
   | { type: "host_joined"; data: { player: Player } }
   | { type: "question_selected"; data: { question: Question; selectedBy?: string } }

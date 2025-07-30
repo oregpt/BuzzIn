@@ -141,6 +141,30 @@ export default function GameHost() {
       gameId: data.gameId,
       players: data.players
     }));
+    
+    // Request game questions and state for existing game
+    sendMessage({
+      type: "get_game_state",
+      data: { gameId: data.gameId }
+    });
+  });
+
+  onMessage("game_state_loaded", (data) => {
+    // Load questions and mark used ones when rejoining existing game
+    const usedQuestions = new Set<string>();
+    
+    // Extract used questions from server data
+    data.questions?.forEach((q: any) => {
+      if (q.isUsed) {
+        usedQuestions.add(`${q.category}-${q.value}`);
+      }
+    });
+
+    setGameState(prev => ({
+      ...prev,
+      categories: data.categories || prev.categories,
+      usedQuestions
+    }));
   });
 
   onMessage("player_joined", (data) => {
@@ -493,7 +517,7 @@ export default function GameHost() {
                       <span className="font-bold text-blue-600 dark:text-yellow-400 mr-3">
                         {String.fromCharCode(65 + index)}.
                       </span>
-                      <span className="text-black dark:text-white">{option as string}</span>
+                      <span className="text-black dark:text-white">{String(option)}</span>
                     </div>
                   ))}
                 </div>

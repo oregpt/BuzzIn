@@ -255,6 +255,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
           }
 
+          case 'get_game_state': {
+            const { gameId } = message.data;
+            if (!gameId) break;
+
+            // Get game questions and used status
+            const questions = await storage.getQuestionsByGameId(gameId);
+            const game = await storage.getGame(gameId);
+            
+            if (!game) {
+              sendToPlayer(ws.playerId || '', {
+                type: "error", 
+                data: { message: "Game not found" }
+              });
+              break;
+            }
+
+            sendToPlayer(ws.playerId || '', {
+              type: "game_state_loaded",
+              data: { 
+                questions,
+                game,
+                categories: (game.categories as string[]) || []
+              }
+            });
+            break;
+          }
+
           case 'select_question': {
             const { category, value, selectedBy } = message.data;
             if (!ws.gameId) break;
