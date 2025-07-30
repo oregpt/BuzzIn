@@ -18,10 +18,18 @@ interface PlayerState {
   otherPlayers: Player[];
   currentQuestion: Question | null;
   gameStatus: string;
-  hasBuzzed: boolean;
-  buzzRank: number;
-  canAnswer: boolean;
+  hasSubmitted: boolean;
   answer: string;
+  timeRemaining: number;
+  questionStartTime: number | null;
+  showResults: boolean;
+  submittedAnswers: Array<{
+    playerId: string;
+    playerName: string;
+    answer: string;
+    submissionOrder: number;
+    submissionTime: number;
+  }>;
 }
 
 export default function GamePlayer() {
@@ -38,10 +46,12 @@ export default function GamePlayer() {
     otherPlayers: [],
     currentQuestion: null,
     gameStatus: "Waiting for game to start...",
-    hasBuzzed: false,
-    buzzRank: 0,
-    canAnswer: false,
+    hasSubmitted: false,
     answer: "",
+    timeRemaining: 0,
+    questionStartTime: null,
+    showResults: false,
+    submittedAnswers: [],
   });
 
   // Initialize from URL params or redirect
@@ -87,33 +97,47 @@ export default function GamePlayer() {
   });
 
   onMessage("question_selected", (data) => {
+    const startTime = Date.now();
     setPlayerState(prev => ({
       ...prev,
       currentQuestion: data.question,
-      gameStatus: "Question active - Buzz in to answer!",
-      hasBuzzed: false,
-      buzzRank: 0,
-      canAnswer: false,
+      gameStatus: "Question active - Submit your answer!",
+      hasSubmitted: false,
       answer: "",
+      timeRemaining: 15,
+      questionStartTime: startTime,
+      showResults: false,
+      submittedAnswers: [],
     }));
   });
 
-  onMessage("buzz_received", (data) => {
+  onMessage("answer_submitted", (data) => {
     if (data.playerId === playerState.playerId) {
-      const ordinal = getOrdinal(data.buzzOrder);
       setPlayerState(prev => ({
         ...prev,
-        hasBuzzed: true,
-        buzzRank: data.buzzOrder,
-        canAnswer: data.isFirst && prev.currentQuestion?.type === 'specific_answer',
-        gameStatus: data.isFirst ? "You buzzed first! " + (prev.currentQuestion?.type === 'specific_answer' ? "Enter your answer." : "Waiting for host...") : `You buzzed in ${ordinal} place`,
+        hasSubmitted: true,
+        gameStatus: `Answer submitted! (${getOrdinal(data.submissionOrder)} place)`,
       }));
-    } else if (data.isFirst) {
+    } else {
       setPlayerState(prev => ({
         ...prev,
-        gameStatus: `${data.playerName} buzzed in first!`,
+        submittedAnswers: [...prev.submittedAnswers, {
+          playerId: data.playerId,
+          playerName: data.playerName,
+          answer: data.answer,
+          submissionOrder: data.submissionOrder,
+          submissionTime: data.submissionTime,
+        }]
       }));
     }
+  });
+
+  onMessage("all_answers_collected", (data) => {
+    setPlayerState(prev => ({
+      ...prev,
+      showResults: true,
+      gameStatus: "All answers submitted! Host is reviewing...",
+    }));
   });
 
   const getOrdinal = (num: number) => {
@@ -152,10 +176,12 @@ export default function GamePlayer() {
       ...prev,
       currentQuestion: null,
       gameStatus: "Waiting for next question...",
-      hasBuzzed: false,
-      buzzRank: 0,
-      canAnswer: false,
+      hasSubmitted: false,
       answer: "",
+      timeRemaining: 0,
+      questionStartTime: null,
+      showResults: false,
+      submittedAnswers: [],
     }));
   });
 
@@ -163,31 +189,44 @@ export default function GamePlayer() {
     navigate('/results');
   });
 
-  const handleBuzz = () => {
-    if (!playerState.currentQuestion || playerState.hasBuzzed) return;
+  // Timer effect for countdown
+  useEffect(() => {
+    if (!playerState.currentQuestion || playerState.hasSubmitted || playerState.questionStartTime === null) {
+      return;
+    }
 
-    sendMessage({
-      type: "buzz",
-      data: { questionId: playerState.currentQuestion.id }
-    });
-  };
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - playerState.questionStartTime!) / 1000;
+      const remaining = Math.max(0, 15 - elapsed);
+      
+      setPlayerState(prev => ({
+        ...prev,
+        timeRemaining: remaining
+      }));
+
+      if (remaining <= 0 && !playerState.hasSubmitted) {
+        // Auto-submit empty answer when time runs out
+        handleSubmitAnswer();
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [playerState.currentQuestion, playerState.hasSubmitted, playerState.questionStartTime]);
 
   const handleSubmitAnswer = () => {
-    if (!playerState.currentQuestion || !playerState.answer.trim()) return;
+    if (!playerState.currentQuestion || playerState.hasSubmitted || playerState.questionStartTime === null) return;
+
+    const submissionTime = (Date.now() - playerState.questionStartTime) / 1000;
+    const answerText = playerState.answer.trim() || "(No answer)";
 
     sendMessage({
       type: "submit_answer",
-      data: { 
+      data: {
         questionId: playerState.currentQuestion.id,
-        answer: playerState.answer.trim()
+        answer: answerText,
+        submissionTime
       }
     });
-
-    setPlayerState(prev => ({
-      ...prev,
-      canAnswer: false,
-      gameStatus: "Answer submitted, waiting for host..."
-    }));
   };
 
   return (
@@ -219,36 +258,121 @@ export default function GamePlayer() {
           </CardContent>
         </Card>
 
-        {/* The Big Buzzer */}
-        <div className="mb-8">
-          <Button
-            onClick={handleBuzz}
-            disabled={!playerState.currentQuestion || playerState.hasBuzzed}
-            className={`
-              w-full h-64 rounded-full text-white font-black text-4xl font-game shadow-2xl border-4
-              transition-all duration-100 active:scale-95 flex items-center justify-center
-              ${playerState.hasBuzzed 
-                ? 'bg-game-accent border-green-400' 
-                : playerState.currentQuestion 
-                  ? 'bg-gradient-to-b from-game-danger to-red-700 hover:from-red-600 hover:to-red-800 border-red-400 animate-glow' 
-                  : 'bg-gray-600 border-gray-500 cursor-not-allowed'
-              }
-            `}
-          >
-            <div className="text-center">
-              <Hand className="text-6xl mb-4 block mx-auto" />
-              <div>{playerState.hasBuzzed ? 'BUZZED!' : 'BUZZ!'}</div>
-            </div>
-          </Button>
-        </div>
+        {/* Timer */}
+        {playerState.currentQuestion && !playerState.hasSubmitted && (
+          <Card className="bg-game-surface border-border-game-gray mb-6">
+            <CardContent className="pt-6 text-center">
+              <div className="text-gray-300 text-sm mb-2">Time Remaining</div>
+              <div className={`text-6xl font-bold font-game ${
+                playerState.timeRemaining <= 5 ? 'text-red-500 animate-pulse' : 'text-green-500'
+              }`}>
+                {Math.ceil(playerState.timeRemaining)}
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2 mt-4">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-100 ${
+                    playerState.timeRemaining <= 5 ? 'bg-red-500' : 'bg-green-500'
+                  }`}
+                  style={{ width: `${(playerState.timeRemaining / 15) * 100}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Buzz Feedback */}
-        {playerState.hasBuzzed && (
+        {/* Question Display */}
+        {playerState.currentQuestion && (
+          <Card className="bg-game-surface border-border-game-gray mb-6">
+            <CardContent className="pt-6">
+              <div className="text-center mb-4">
+                <div className="text-game-secondary text-lg font-bold mb-2">
+                  {playerState.currentQuestion.category} - {formatCurrency(playerState.currentQuestion.value)}
+                </div>
+                <div className="text-white text-lg">
+                  {playerState.currentQuestion.question}
+                </div>
+              </div>
+
+              {/* Answer Input */}
+              {!playerState.hasSubmitted && (
+                <div className="space-y-4">
+                  {playerState.currentQuestion.type === 'multiple_choice' && playerState.currentQuestion.options ? (
+                    <div className="space-y-2">
+                      {(playerState.currentQuestion.options as string[]).map((option, index) => (
+                        <Button
+                          key={index}
+                          onClick={() => setPlayerState(prev => ({ ...prev, answer: String.fromCharCode(65 + index) }))}
+                          className={`w-full justify-start ${
+                            playerState.answer === String.fromCharCode(65 + index)
+                              ? 'bg-game-primary border-game-secondary'
+                              : 'bg-gray-700 hover:bg-gray-600'
+                          }`}
+                        >
+                          {String.fromCharCode(65 + index)}. {option}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : playerState.currentQuestion.type === 'true_false' ? (
+                    <div className="flex space-x-4">
+                      <Button
+                        onClick={() => setPlayerState(prev => ({ ...prev, answer: 'true' }))}
+                        className={`flex-1 ${
+                          playerState.answer === 'true'
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : 'bg-gray-700 hover:bg-gray-600'
+                        }`}
+                      >
+                        True
+                      </Button>
+                      <Button
+                        onClick={() => setPlayerState(prev => ({ ...prev, answer: 'false' }))}
+                        className={`flex-1 ${
+                          playerState.answer === 'false'
+                            ? 'bg-red-600 hover:bg-red-700'
+                            : 'bg-gray-700 hover:bg-gray-600'
+                        }`}
+                      >
+                        False
+                      </Button>
+                    </div>
+                  ) : (
+                    <Textarea
+                      value={playerState.answer}
+                      onChange={(e) => setPlayerState(prev => ({ ...prev, answer: e.target.value }))}
+                      placeholder="Type your answer here..."
+                      className="bg-gray-700 border-gray-600 text-white"
+                      rows={3}
+                    />
+                  )}
+
+                  <Button
+                    onClick={handleSubmitAnswer}
+                    disabled={playerState.timeRemaining <= 0}
+                    className="w-full bg-game-primary hover:bg-game-primary/80 text-white font-bold py-4 text-lg"
+                  >
+                    Submit Answer
+                  </Button>
+                </div>
+              )}
+
+              {/* Submitted Feedback */}
+              {playerState.hasSubmitted && (
+                <div className="text-center">
+                  <div className="text-green-500 text-lg font-bold mb-2">Answer Submitted!</div>
+                  <div className="text-gray-300">Waiting for other players...</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Answer Submitted Feedback */}
+        {playerState.hasSubmitted && (
           <Card className="bg-game-primary mb-6 text-center">
             <CardContent className="pt-4">
-              <div className="text-white text-lg font-bold">You buzzed in!</div>
+              <div className="text-white text-lg font-bold">Answer submitted!</div>
               <div className="text-gray-300 text-sm">
-                {playerState.buzzRank === 1 ? 'First place!' : `${getOrdinal(playerState.buzzRank)} place`}
+                Waiting for host to review answers...
               </div>
             </CardContent>
           </Card>

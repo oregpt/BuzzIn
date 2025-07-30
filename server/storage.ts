@@ -34,6 +34,7 @@ export interface IStorage {
   // Game Answer methods
   createGameAnswer(answer: InsertGameAnswer): Promise<GameAnswer>;
   getGameAnswersByQuestion(questionId: string): Promise<GameAnswer[]>;
+  getAnswersByQuestion(questionId: string): Promise<GameAnswer[]>;
 
   // Utility methods
   generateRoomCode(): Promise<string>;
@@ -578,6 +579,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGameAnswersByQuestion(questionId: string): Promise<GameAnswer[]> {
+    return await db.select().from(gameAnswers).where(eq(gameAnswers.questionId, questionId));
+  }
+
+  async getAnswersByQuestion(questionId: string): Promise<GameAnswer[]> {
     return await db.select().from(gameAnswers).where(eq(gameAnswers.questionId, questionId));
   }
 

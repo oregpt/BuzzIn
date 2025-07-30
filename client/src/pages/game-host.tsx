@@ -26,6 +26,10 @@ interface GameState {
     playerId: string;
     playerName: string;
     answer: string;
+    submissionOrder: number;
+    submissionTime: number;
+    isCorrect?: boolean;
+    pointsAwarded?: number;
   }>;
   usedQuestions: Set<string>;
   nextPicker: { playerId: string; playerName: string } | null;
@@ -209,9 +213,24 @@ export default function GameHost() {
   });
 
   onMessage("answer_submitted", (data) => {
+    console.log('Answer submitted:', data);
     setGameState(prev => ({
       ...prev,
-      submittedAnswers: [...prev.submittedAnswers, data]
+      submittedAnswers: [...prev.submittedAnswers, {
+        playerId: data.playerId,
+        playerName: data.playerName,
+        answer: data.answer,
+        submissionOrder: data.submissionOrder,
+        submissionTime: data.submissionTime
+      }]
+    }));
+  });
+
+  onMessage("all_answers_collected", (data) => {
+    console.log('All answers collected:', data);
+    setGameState(prev => ({
+      ...prev,
+      submittedAnswers: data.answers
     }));
   });
 
@@ -550,19 +569,75 @@ export default function GameHost() {
 
               {/* Submitted Answers */}
               {gameState.submittedAnswers.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-bold text-black dark:text-white mb-4">Submitted Answers:</h3>
-                  {gameState.submittedAnswers.map((answer, index) => (
-                    <Card key={index} className="bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 mb-2">
-                      <CardContent className="pt-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-blue-600 dark:text-yellow-400 font-bold">{answer.playerName}:</span>
-                          <span className="text-black dark:text-white">{answer.answer}</span>
+                <Card className="bg-green-50 dark:bg-gray-800 border-green-200 dark:border-gray-600 mb-8">
+                  <CardContent className="pt-6">
+                    <div className="text-black dark:text-white text-lg mb-4 text-center">
+                      Submitted Answers ({gameState.submittedAnswers.length}):
+                    </div>
+                    <div className="space-y-3">
+                      {gameState.submittedAnswers.map((answer, index) => (
+                        <div 
+                          key={answer.playerId}
+                          className={`flex items-center justify-between p-4 rounded-lg border ${
+                            answer.submissionOrder === 1 
+                              ? 'bg-yellow-400 dark:bg-yellow-500 text-black border-yellow-500' 
+                              : 'bg-gray-200 dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-600'
+                          }`}
+                        >
+                          <div className="flex items-center flex-1">
+                            <span className="font-bold text-lg mr-3">#{answer.submissionOrder}</span>
+                            <div className="flex-1">
+                              <div className="font-medium">{answer.playerName}</div>
+                              <div className="text-sm opacity-75">
+                                {answer.submissionTime?.toFixed(2)}s
+                              </div>
+                            </div>
+                          </div>
+                          <div className="ml-4 flex items-center gap-4">
+                            <div className="font-bold">{answer.answer}</div>
+                            {answer.isCorrect !== undefined && (
+                              <div className={`flex items-center gap-1 px-2 py-1 rounded text-sm font-bold ${
+                                answer.isCorrect 
+                                  ? 'bg-green-500 text-white' 
+                                  : 'bg-red-500 text-white'
+                              }`}>
+                                {answer.isCorrect ? (
+                                  <>
+                                    <Check className="h-3 w-3" />
+                                    +{formatCurrency(answer.pointsAwarded || 0)}
+                                  </>
+                                ) : (
+                                  <>
+                                    <X className="h-3 w-3" />
+                                    {formatCurrency(answer.pointsAwarded || 0)}
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            {answer.isCorrect === undefined && (
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => handleMarkAnswer(answer.playerId, true)}
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  onClick={() => handleMarkAnswer(answer.playerId, false)}
+                                  size="sm"
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               {/* Admin Controls */}

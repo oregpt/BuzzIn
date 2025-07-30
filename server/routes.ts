@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { gameAnswers } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 import { z } from "zod";
 import type { WSMessage, WSResponse, Player, Game, Question } from "@shared/schema";
 
@@ -307,8 +310,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status: "active"
             });
 
-            // Clear any existing buzzes for this question
+            // Clear any existing buzzes and answers for this question
             await storage.clearBuzzesForQuestion(question.id);
+            // Clear any existing answers for the new gameplay model
+            const existingAnswers = await storage.getAnswersByQuestion(question.id);
+            for (const answer of existingAnswers) {
+              await db.delete(gameAnswers).where(eq(gameAnswers.id, answer.id));
+            }
 
             let selectedByName = "Host";
             if (selectedBy) {
@@ -379,29 +387,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           case 'submit_answer': {
-            const { questionId, answer } = message.data;
+            const { questionId, answer, submissionTime } = message.data;
             if (!ws.playerId || !ws.gameId) break;
 
             const player = await storage.getPlayer(ws.playerId);
             if (!player) break;
 
+            // Get current answers for this question to determine submission order
+            const existingAnswers = await storage.getAnswersByQuestion(questionId);
+            const submissionOrder = existingAnswers.length + 1;
+
+            // Store the submitted answer
             await storage.createGameAnswer({
               gameId: ws.gameId,
               playerId: ws.playerId,
               questionId,
               answer,
-              isCorrect: null,
+              isCorrect: null, // Will be set when host marks it
               pointsAwarded: 0,
+              submissionOrder,
+              submissionTime,
             });
 
+            // Broadcast to all players that an answer was submitted
             broadcastToGame(ws.gameId, {
               type: "answer_submitted",
-              data: {
-                playerId: ws.playerId,
-                playerName: player.name,
-                answer
+              data: { 
+                playerId: ws.playerId, 
+                playerName: player.name, 
+                answer, 
+                submissionOrder,
+                submissionTime 
               }
             });
+
+            // Check if all players have submitted answers
+            const allPlayers = await storage.getPlayersByGameId(ws.gameId);
+            const nonHostPlayers = allPlayers.filter(p => !p.isHost);
+            const allAnswers = await storage.getAnswersByQuestion(questionId);
+            
+            if (allAnswers.length >= nonHostPlayers.length) {
+              // All players have submitted - evaluate answers automatically
+              const question = await storage.getQuestion(questionId);
+              if (!question) break;
+
+              // Process answers and auto-evaluate
+              const answersWithEvaluation = await Promise.all(
+                allAnswers.map(async (answer) => {
+                  const answerPlayer = await storage.getPlayer(answer.playerId);
+                  
+                  // Auto-evaluate answer
+                  let isCorrect = false;
+                  let pointsAwarded = 0;
+
+                  if (question.type === 'multiple_choice') {
+                    isCorrect = answer.answer.toLowerCase() === question.correctAnswer.toLowerCase();
+                  } else if (question.type === 'true_false') {
+                    isCorrect = answer.answer.toLowerCase() === question.correctAnswer.toLowerCase();
+                  } else {
+                    // For specific answers, use lenient matching
+                    const userAnswer = answer.answer.toLowerCase().trim();
+                    const correctAnswer = question.correctAnswer.toLowerCase().trim();
+                    isCorrect = userAnswer === correctAnswer || 
+                                userAnswer.includes(correctAnswer) || 
+                                correctAnswer.includes(userAnswer);
+                  }
+
+                  // Award points: fastest correct gets full points, incorrect loses points
+                  if (isCorrect && answer.submissionOrder === 1) {
+                    pointsAwarded = question.value;
+                  } else if (!isCorrect) {
+                    pointsAwarded = -question.value;
+                  }
+
+                  // Update answer in database
+                  await db.update(gameAnswers)
+                    .set({ isCorrect, pointsAwarded })
+                    .where(eq(gameAnswers.id, answer.id));
+
+                  // Update player score
+                  if (pointsAwarded !== 0) {
+                    const currentPlayer = await storage.getPlayer(answer.playerId);
+                    if (currentPlayer) {
+                      const newScore = currentPlayer.score + pointsAwarded;
+                      await storage.updatePlayer(answer.playerId, { score: newScore });
+                    }
+                  }
+
+                  return {
+                    playerId: answer.playerId,
+                    playerName: answerPlayer?.name || 'Unknown',
+                    answer: answer.answer,
+                    submissionOrder: answer.submissionOrder || 0,
+                    submissionTime: answer.submissionTime || 0,
+                    isCorrect,
+                    pointsAwarded
+                  };
+                })
+              );
+
+              // Sort by submission order
+              answersWithEvaluation.sort((a, b) => a.submissionOrder - b.submissionOrder);
+
+              broadcastToGame(ws.gameId, {
+                type: "all_answers_collected",
+                data: { answers: answersWithEvaluation }
+              });
+
+              // Broadcast individual score updates
+              for (const answer of answersWithEvaluation) {
+                if (answer.pointsAwarded !== 0) {
+                  const updatedPlayer = await storage.getPlayer(answer.playerId);
+                  broadcastToGame(ws.gameId, {
+                    type: "answer_marked",
+                    data: {
+                      playerId: answer.playerId,
+                      isCorrect: answer.isCorrect,
+                      pointsAwarded: answer.pointsAwarded,
+                      newScore: updatedPlayer?.score || 0,
+                      canPickNext: answer.isCorrect && answer.submissionOrder === 1
+                    }
+                  });
+                }
+              }
+            }
             break;
           }
 

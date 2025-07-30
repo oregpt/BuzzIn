@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, json, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, json, timestamp, boolean, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -63,6 +63,8 @@ export const gameAnswers = pgTable("game_answers", {
   answer: text("answer").notNull(),
   isCorrect: boolean("is_correct"),
   pointsAwarded: integer("points_awarded").notNull().default(0),
+  submissionOrder: integer("submission_order"),
+  submissionTime: real("submission_time"), // Time in seconds from question start
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
@@ -115,7 +117,7 @@ export type WSMessage =
   | { type: "get_game_state"; data: { gameId: string } }
   | { type: "select_question"; data: { category: string; value: number; selectedBy?: string } }
   | { type: "buzz"; data: { questionId: string } }
-  | { type: "submit_answer"; data: { questionId: string; answer: string } }
+  | { type: "submit_answer"; data: { questionId: string; answer: string; submissionTime: number } }
   | { type: "mark_answer"; data: { playerId: string; isCorrect: boolean; acceptClose?: boolean } }
   | { type: "mark_question_used"; data: { questionId: string } }
   | { type: "close_question"; data: {} }
@@ -129,7 +131,8 @@ export type WSResponse =
   | { type: "host_joined"; data: { player: Player } }
   | { type: "question_selected"; data: { question: Question; selectedBy?: string } }
   | { type: "buzz_received"; data: { playerId: string; playerName: string; timestamp: number; isFirst: boolean; buzzOrder: number } }
-  | { type: "answer_submitted"; data: { playerId: string; playerName: string; answer: string } }
+  | { type: "answer_submitted"; data: { playerId: string; playerName: string; answer: string; submissionOrder: number; submissionTime: number } }
+  | { type: "all_answers_collected"; data: { answers: Array<{ playerId: string; playerName: string; answer: string; submissionOrder: number; submissionTime: number; isCorrect?: boolean; pointsAwarded?: number }> } }
   | { type: "answer_marked"; data: { playerId: string; isCorrect: boolean; pointsAwarded: number; newScore: number; canPickNext: boolean } }
   | { type: "question_marked_used"; data: { questionId: string } }
   | { type: "question_closed"; data: { nextPicker?: { playerId: string; playerName: string } } }
