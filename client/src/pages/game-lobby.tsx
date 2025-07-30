@@ -45,9 +45,7 @@ export default function GameLobby() {
 
   // Delete game mutation
   const deleteGameMutation = useMutation({
-    mutationFn: (gameId: string) => apiRequest(`/api/games/${gameId}`, {
-      method: 'DELETE',
-    }),
+    mutationFn: (gameId: string) => apiRequest('DELETE', `/api/games/${gameId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/open-games'] });
       toast({
