@@ -8,6 +8,17 @@ export function useWebSocket() {
   const messageHandlers = useRef<Map<string, (data: any) => void>>(new Map());
 
   const connect = useCallback(() => {
+    // Don't create a new connection if one already exists and is connecting/open
+    if (ws.current && (ws.current.readyState === WebSocket.CONNECTING || ws.current.readyState === WebSocket.OPEN)) {
+      return;
+    }
+
+    // Close existing connection if it exists
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+    }
+
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     
@@ -20,7 +31,8 @@ export function useWebSocket() {
 
     ws.current.onclose = () => {
       setIsConnected(false);
-      // Attempt to reconnect after 3 seconds
+      ws.current = null;
+      // Only reconnect if connection was not manually closed
       setTimeout(connect, 3000);
     };
 
@@ -50,6 +62,7 @@ export function useWebSocket() {
     if (ws.current) {
       ws.current.close();
       ws.current = null;
+      setIsConnected(false);
     }
   }, []);
 
