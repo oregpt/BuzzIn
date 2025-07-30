@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Host Interface</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #000; color: #fff; }
+        .status { margin: 10px 0; padding: 10px; background: #333; }
+        .question { margin: 20px 0; padding: 15px; background: #004; }
+        .answer { margin: 10px 0; padding: 10px; background: #040; }
+        button { padding: 10px 20px; margin: 5px; background: #006; color: #fff; border: none; cursor: pointer; }
+        button:hover { background: #008; }
+        .incorrect { background: #400 !important; }
+        .correct { background: #040 !important; }
+    </style>
+</head>
+<body>
+    <h1>Host Test Interface</h1>
+    <div id="status" class="status">Connecting...</div>
+    
+    <div>
+        <h3>Game Controls</h3>
+        <button onclick="createGame()">Create Game</button>
+        <button onclick="selectQuestion100()">Select $100 Question</button>
+        <button onclick="selectQuestion200()">Select $200 Question</button>
+    </div>
+    
+    <div id="gameInfo"></div>
+    <div id="questionDisplay"></div>
+    <div id="answersDisplay"></div>
+
+    <script>
+        let ws;
+        let gameId = null;
+        let roomCode = null;
+        
+        function connect() {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                document.getElementById('status').textContent = 'Connected to WebSocket';
+            };
+            
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                console.log('Received:', message);
+                handleMessage(message);
+            };
+            
+            ws.onerror = (error) => {
+                document.getElementById('status').textContent = 'WebSocket error: ' + error;
+            };
+        }
+        
+        function handleMessage(message) {
+            switch(message.type) {
+                case 'game_created':
+                    gameId = message.data.gameId;
+                    roomCode = message.data.roomCode;
+                    document.getElementById('gameInfo').innerHTML = `
+                        <h3>Game Created</h3>
+                        <p>Room Code: ${roomCode}</p>
+                        <p>Host Code: ${message.data.hostCode}</p>
+                        <p>Game ID: ${gameId}</p>
+                    `;
+                    break;
+                    
+                case 'question_selected':
+                    const q = message.data.question;
+                    document.getElementById('questionDisplay').innerHTML = `
+                        <div class="question">
+                            <h3>${q.category} - $${q.value}</h3>
+                            <p><strong>Question:</strong> ${q.question}</p>
+                            <p><strong>Correct Answer:</strong> ${q.correctAnswer}</p>
+                            <p><strong>Type:</strong> ${q.type}</p>
+                        </div>
+                    `;
+                    document.getElementById('answersDisplay').innerHTML = '<h4>Waiting for answers...</h4>';
+                    break;
+                    
+                case 'answer_submitted':
+                    console.log('Answer submitted:', message.data);
+                    updateAnswersDisplay(message.data);
+                    break;
+                    
+                case 'all_answers_collected':
+                    console.log('All answers collected:', message.data);
+                    displayAllAnswers(message.data.answers);
+                    break;
+            }
+        }
+        
+        function updateAnswersDisplay(answer) {
+            const display = document.getElementById('answersDisplay');
+            const existing = display.innerHTML;
+            display.innerHTML = existing + `
+                <div class="answer">
+                    #${answer.submissionOrder} ${answer.playerName}: "${answer.answer}" 
+                    (${answer.submissionTime?.toFixed(2)}s)
+                </div>
+            `;
+        }
+        
+        function displayAllAnswers(answers) {
+            const display = document.getElementById('answersDisplay');
+            display.innerHTML = '<h4>Final Results:</h4>';
+            answers.forEach(answer => {
+                const correctClass = answer.isCorrect ? 'correct' : 'incorrect';
+                display.innerHTML += `
+                    <div class="answer ${correctClass}">
+                        #${answer.submissionOrder} ${answer.playerName}: "${answer.answer}" 
+                        (${answer.submissionTime?.toFixed(2)}s) - 
+                        ${answer.isCorrect ? 'CORRECT' : 'INCORRECT'} 
+                        (${answer.pointsAwarded > 0 ? '+' : ''}$${answer.pointsAwarded})
+                    </div>
+                `;
+            });
+        }
+        
+        function createGame() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('WebSocket not connected');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                type: 'create_game',
+                data: {
+                    categories: ['Science', 'History', 'Sports', 'Movies', 'Music', 'Geography'],
+                    gameSetup: JSON.stringify({ categories: ['Science', 'History', 'Sports', 'Movies', 'Music', 'Geography'] })
+                }
+            }));
+        }
+        
+        function selectQuestion100() {
+            selectQuestion('Science', 100);
+        }
+        
+        function selectQuestion200() {
+            selectQuestion('Science', 200);
+        }
+        
+        function selectQuestion(category, value) {
+            if (!gameId) {
+                alert('No game created yet');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                type: 'select_question',
+                data: {
+                    gameId: gameId,
+                    category: category,
+                    value: value
+                }
+            }));
+        }
+        
+        // Connect on page load
+        connect();
+    </script>
+</body>
+</html>

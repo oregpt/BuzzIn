@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Player Interface</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #001; color: #fff; }
+        .status { margin: 10px 0; padding: 10px; background: #333; }
+        .question { margin: 20px 0; padding: 15px; background: #004; }
+        .timer { font-size: 2em; color: #ff0; margin: 10px 0; }
+        .answer-form { margin: 20px 0; padding: 15px; background: #040; }
+        input, textarea, button { padding: 10px; margin: 5px; font-size: 16px; }
+        button { background: #006; color: #fff; border: none; cursor: pointer; }
+        button:hover { background: #008; }
+        button:disabled { background: #333; cursor: not-allowed; }
+        .submitted { background: #080; }
+    </style>
+</head>
+<body>
+    <h1>Player Test Interface</h1>
+    <div id="status" class="status">Connecting...</div>
+    
+    <div>
+        <h3>Join Game</h3>
+        <input type="text" id="roomCode" placeholder="Room Code" value="4444">
+        <input type="text" id="playerName" placeholder="Player Name" value="TestPlayer">
+        <button onclick="joinGame()">Join Game</button>
+    </div>
+    
+    <div id="gameInfo"></div>
+    <div id="questionDisplay"></div>
+    <div id="timerDisplay"></div>
+    <div id="answerForm"></div>
+    <div id="resultDisplay"></div>
+
+    <script>
+        let ws;
+        let playerId = null;
+        let gameId = null;
+        let currentQuestion = null;
+        let timeLeft = 15;
+        let timer = null;
+        let hasSubmitted = false;
+        
+        function connect() {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                document.getElementById('status').textContent = 'Connected to WebSocket';
+            };
+            
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                console.log('Received:', message);
+                handleMessage(message);
+            };
+            
+            ws.onerror = (error) => {
+                document.getElementById('status').textContent = 'WebSocket error: ' + error;
+            };
+        }
+        
+        function handleMessage(message) {
+            switch(message.type) {
+                case 'game_joined':
+                    playerId = message.data.playerId;
+                    gameId = message.data.gameId;
+                    document.getElementById('gameInfo').innerHTML = `
+                        <h3>Joined Game</h3>
+                        <p>Player ID: ${playerId}</p>
+                        <p>Game ID: ${gameId}</p>
+                        <p>Players: ${message.data.players.length}</p>
+                    `;
+                    break;
+                    
+                case 'question_selected':
+                    currentQuestion = message.data.question;
+                    hasSubmitted = false;
+                    startQuestionTimer();
+                    displayQuestion();
+                    break;
+                    
+                case 'answer_submitted':
+                    if (message.data.playerId === playerId) {
+                        document.getElementById('resultDisplay').innerHTML = `
+                            <div class="submitted">
+                                <h4>Answer Submitted!</h4>
+                                <p>Your answer: "${message.data.answer}"</p>
+                                <p>Submission #${message.data.submissionOrder} at ${message.data.submissionTime?.toFixed(2)}s</p>
+                            </div>
+                        `;
+                        hasSubmitted = true;
+                        clearAnswerForm();
+                    }
+                    break;
+                    
+                case 'all_answers_collected':
+                    clearTimer();
+                    document.getElementById('timerDisplay').innerHTML = '<h3>Time\'s up! Results:</h3>';
+                    const myAnswer = message.data.answers.find(a => a.playerId === playerId);
+                    if (myAnswer) {
+                        document.getElementById('resultDisplay').innerHTML = `
+                            <div class="${myAnswer.isCorrect ? 'correct' : 'incorrect'}">
+                                <h4>${myAnswer.isCorrect ? 'CORRECT!' : 'INCORRECT'}</h4>
+                                <p>Your answer: "${myAnswer.answer}"</p>
+                                <p>Points: ${myAnswer.pointsAwarded > 0 ? '+' : ''}$${myAnswer.pointsAwarded}</p>
+                                <p>Finished #${myAnswer.submissionOrder} in ${myAnswer.submissionTime?.toFixed(2)}s</p>
+                            </div>
+                        `;
+                    }
+                    break;
+            }
+        }
+        
+        function joinGame() {
+            const roomCode = document.getElementById('roomCode').value;
+            const playerName = document.getElementById('playerName').value;
+            
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('WebSocket not connected');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                type: 'join_game',
+                data: {
+                    roomCode: roomCode,
+                    playerName: playerName
+                }
+            }));
+        }
+        
+        function displayQuestion() {
+            if (!currentQuestion) return;
+            
+            document.getElementById('questionDisplay').innerHTML = `
+                <div class="question">
+                    <h3>${currentQuestion.category} - $${currentQuestion.value}</h3>
+                    <p><strong>${currentQuestion.question}</strong></p>
+                </div>
+            `;
+            
+            createAnswerForm();
+        }
+        
+        function createAnswerForm() {
+            if (hasSubmitted) return;
+            
+            let formHtml = '<div class="answer-form"><h4>Your Answer:</h4>';
+            
+            if (currentQuestion.type === 'multiple_choice' && currentQuestion.options) {
+                currentQuestion.options.forEach((option, index) => {
+                    const letter = String.fromCharCode(65 + index);
+                    formHtml += `
+                        <div>
+                            <button onclick="selectAnswer('${letter}')">${letter}. ${option}</button>
+                        </div>
+                    `;
+                });
+            } else if (currentQuestion.type === 'true_false') {
+                formHtml += `
+                    <button onclick="selectAnswer('true')">TRUE</button>
+                    <button onclick="selectAnswer('false')">FALSE</button>
+                `;
+            } else {
+                formHtml += `
+                    <textarea id="answerText" placeholder="Type your answer here..." rows="3" cols="50"></textarea><br>
+                    <button onclick="submitTextAnswer()">Submit Answer</button>
+                `;
+            }
+            
+            formHtml += '</div>';
+            document.getElementById('answerForm').innerHTML = formHtml;
+        }
+        
+        function selectAnswer(answer) {
+            submitAnswer(answer);
+        }
+        
+        function submitTextAnswer() {
+            const answerText = document.getElementById('answerText').value.trim();
+            if (answerText) {
+                submitAnswer(answerText);
+            }
+        }
+        
+        function submitAnswer(answer) {
+            if (hasSubmitted || !currentQuestion) return;
+            
+            ws.send(JSON.stringify({
+                type: 'submit_answer',
+                data: {
+                    gameId: gameId,
+                    questionId: currentQuestion.id,
+                    answer: answer
+                }
+            }));
+        }
+        
+        function startQuestionTimer() {
+            timeLeft = 15;
+            updateTimerDisplay();
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearTimer();
+                    if (!hasSubmitted) {
+                        document.getElementById('answerForm').innerHTML = '<h4>Time\'s up!</h4>';
+                    }
+                }
+            }, 1000);
+        }
+        
+        function updateTimerDisplay() {
+            document.getElementById('timerDisplay').innerHTML = `
+                <div class="timer">Time Left: ${timeLeft}s</div>
+            `;
+        }
+        
+        function clearTimer() {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+        }
+        
+        function clearAnswerForm() {
+            document.getElementById('answerForm').innerHTML = '<h4>Answer submitted! Waiting for results...</h4>';
+        }
+        
+        // Connect on page load
+        connect();
+    </script>
+</body>
+</html>
