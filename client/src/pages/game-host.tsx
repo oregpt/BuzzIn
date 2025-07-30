@@ -151,6 +151,32 @@ export default function GameHost() {
       type: "get_game_state",
       data: { gameId: data.gameId }
     });
+    
+    toast({
+      title: "Joined as Host",
+      description: `Room: ${data.roomCode}`,
+    });
+  });
+
+  // Add handler for joining as host specifically
+  onMessage("host_joined", (data) => {
+    setGameState(prev => ({
+      ...prev,
+      roomCode: data.roomCode || prev.roomCode,
+      gameId: data.gameId,
+      players: data.players
+    }));
+    
+    // Request game questions and state for existing game
+    sendMessage({
+      type: "get_game_state",
+      data: { gameId: data.gameId }
+    });
+    
+    toast({
+      title: "Joined as Host",
+      description: `Room: ${data.roomCode}`,
+    });
   });
 
   onMessage("game_state_loaded", (data) => {
@@ -285,7 +311,16 @@ export default function GameHost() {
   });
 
   const handleSelectQuestion = (category: string, value: number) => {
-    console.log('Selecting question:', { category, value, usedQuestions: Array.from(gameState.usedQuestions) });
+    console.log('Selecting question:', { category, value, gameId: gameState.gameId, usedQuestions: Array.from(gameState.usedQuestions) });
+    
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please try refreshing.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     sendMessage({
       type: "select_question",
@@ -298,13 +333,35 @@ export default function GameHost() {
   };
 
   const handleMarkAnswer = (playerId: string, isCorrect: boolean, acceptClose = false) => {
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please try refreshing.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     sendMessage({
       type: "mark_answer",
-      data: { playerId, isCorrect, acceptClose }
+      data: { 
+        playerId, 
+        isCorrect, 
+        acceptClose 
+      }
     });
   };
 
   const handleCloseQuestion = () => {
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please try refreshing.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     sendMessage({
       type: "close_question",
       data: {}
@@ -322,10 +379,12 @@ export default function GameHost() {
 
   const handleMarkUsed = () => {
     // Send message to mark question as used on server
-    if (gameState.currentQuestion) {
+    if (gameState.currentQuestion && gameState.gameId) {
       sendMessage({
         type: "mark_question_used",
-        data: { questionId: gameState.currentQuestion.id }
+        data: { 
+          questionId: gameState.currentQuestion.id 
+        }
       });
     }
     // Then close the question
@@ -337,6 +396,15 @@ export default function GameHost() {
   };
 
   const confirmEndGame = () => {
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please try refreshing.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     sendMessage({
       type: "end_game",
       data: {}
