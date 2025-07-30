@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Player Join</title>
+</head>
+<body>
+    <h1>Test Player Join</h1>
+    <button onclick="testPlayerJoin()">Test Join as Player</button>
+    <div id="output"></div>
+
+    <script>
+        function testPlayerJoin() {
+            const ws = new WebSocket('ws://localhost:5000/ws');
+            const output = document.getElementById('output');
+            
+            ws.onopen = function() {
+                output.innerHTML += '<p>WebSocket connected</p>';
+                
+                // Test joining as player with just name and room code
+                const message = {
+                    type: "join_game",
+                    data: {
+                        roomCode: "BZMH",  // Using existing game
+                        playerName: "TestPlayer123"
+                    }
+                };
+                
+                output.innerHTML += '<p>Sending: ' + JSON.stringify(message) + '</p>';
+                ws.send(JSON.stringify(message));
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                output.innerHTML += '<p>Received: ' + JSON.stringify(data, null, 2) + '</p>';
+                
+                if (data.type === 'game_joined') {
+                    output.innerHTML += '<p style="color: green;"><strong>SUCCESS: Player joined without player code!</strong></p>';
+                } else if (data.type === 'error') {
+                    output.innerHTML += '<p style="color: red;"><strong>ERROR: ' + data.data.message + '</strong></p>';
+                }
+            };
+            
+            ws.onerror = function(error) {
+                output.innerHTML += '<p style="color: red;">WebSocket error: ' + error + '</p>';
+            };
+        }
+    </script>
+</body>
+</html>
