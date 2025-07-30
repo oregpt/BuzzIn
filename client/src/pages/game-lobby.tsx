@@ -108,10 +108,13 @@ export default function GameLobby() {
     console.log('Game joined successfully:', data);
     // Check if the joined player is a host based on the player data
     const isHost = data.players?.find((p: any) => p.id === data.playerId)?.isHost;
+    console.log('Player isHost:', isHost, 'Navigating to:', isHost ? '/host' : '/play');
     if (isHost) {
-      navigate("/host");
+      navigate(`/host?game=${data.gameId}&player=${data.playerId}`);
     } else {
-      navigate("/play");
+      // Get room code from server response
+      const roomCode = data.roomCode || selectedGame?.roomCode || '';
+      navigate(`/play?player=${data.playerId}&game=${data.gameId}&room=${roomCode}`);
     }
   });
 

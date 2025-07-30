@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const joinResponse: WSResponse = {
               type: "game_joined",
-              data: { playerId: player.id, gameId: game.id, players: allPlayers }
+              data: { playerId: player.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode }
             };
             console.log('Sending game_joined response to player:', player.id);
             ws.send(JSON.stringify(joinResponse));

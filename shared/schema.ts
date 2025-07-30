@@ -122,7 +122,7 @@ export type WSMessage =
 
 export type WSResponse = 
   | { type: "game_created"; data: { roomCode: string; gameId: string; hostCode: string } }
-  | { type: "game_joined"; data: { playerId: string; gameId: string; players: Player[] } }
+  | { type: "game_joined"; data: { playerId: string; gameId: string; players: Player[]; roomCode?: string } }
   | { type: "player_joined"; data: { player: Player } }
   | { type: "host_joined"; data: { player: Player } }
   | { type: "question_selected"; data: { question: Question; selectedBy?: string } }
