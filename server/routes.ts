@@ -622,6 +622,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             break;
           }
+
+          case 'reset_game': {
+            console.log('Processing reset_game:', { gameId: ws.gameId, playerId: ws.playerId });
+            if (!ws.gameId) {
+              console.log('No gameId found for reset_game');
+              break;
+            }
+
+            const success = await storage.resetGame(ws.gameId);
+            
+            if (success) {
+              // Get updated player data
+              const players = await storage.getPlayersByGameId(ws.gameId);
+              
+              // Get updated questions
+              const questions = await storage.getQuestionsByGameId(ws.gameId);
+              
+              // Broadcast reset notification to all players
+              broadcastToGame(ws.gameId, {
+                type: "game_reset",
+                data: { 
+                  players: players,
+                  questions: questions
+                }
+              });
+
+              sendToPlayer(ws.playerId || '', {
+                type: "reset_success",
+                data: { message: "Game reset successfully" }
+              });
+            } else {
+              sendToPlayer(ws.playerId || '', {
+                type: "error",
+                data: { message: "Failed to reset game" }
+              });
+            }
+            break;
+          }
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
@@ -690,6 +728,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting game:', error);
       res.status(500).json({ error: 'Failed to delete game' });
+    }
+  });
+
+  // Reset game endpoint
+  app.post('/api/games/:id/reset', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({ error: 'Game ID is required' });
+      }
+
+      const success = await storage.resetGame(id);
+      
+      if (success) {
+        res.json({ message: 'Game reset successfully' });
+      } else {
+        res.status(404).json({ error: 'Game not found' });
+      }
+    } catch (error) {
+      console.error('Error resetting game:', error);
+      res.status(500).json({ error: 'Failed to reset game' });
     }
   });
 

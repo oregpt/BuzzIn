@@ -40,6 +40,7 @@ export interface IStorage {
   generateRoomCode(): Promise<string>;
   generateAuthCode(): string;
   initializeDefaultQuestions(gameId: string, categories: string[]): Promise<void>;
+  resetGame(gameId: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -606,6 +607,34 @@ export class DatabaseStorage implements IStorage {
   generateAuthCode(): string {
     // Generate a 6-character authentication code
     return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+
+  async resetGame(gameId: string): Promise<boolean> {
+    try {
+      // Reset all player scores to 0
+      await db.update(players)
+        .set({ score: 0 })
+        .where(eq(players.gameId, gameId));
+
+      // Mark all questions as unused
+      await db.update(questions)
+        .set({ isUsed: false })
+        .where(eq(questions.gameId, gameId));
+
+      // Clear all buzzes for this game
+      const gameQuestions = await db.select().from(questions).where(eq(questions.gameId, gameId));
+      for (const question of gameQuestions) {
+        await db.delete(buzzes).where(eq(buzzes.questionId, question.id));
+      }
+
+      // Clear all game answers for this game
+      await db.delete(gameAnswers).where(eq(gameAnswers.gameId, gameId));
+
+      return true;
+    } catch (error) {
+      console.error('Error resetting game:', error);
+      return false;
+    }
   }
 }
 

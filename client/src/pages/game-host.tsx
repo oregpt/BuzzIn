@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
-import { Trophy, Users, Pause, Square, Check, X, Star, ArrowLeft } from "lucide-react";
+import { Trophy, Users, Pause, Square, Check, X, Star, ArrowLeft, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DEFAULT_CATEGORIES, VALUES, formatCurrency } from "@/lib/game-data";
@@ -61,6 +61,7 @@ export default function GameHost() {
   const [showQuestion, setShowQuestion] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Initialize from game setup or URL params
   useEffect(() => {
@@ -316,6 +317,35 @@ export default function GameHost() {
     }, 3000);
   });
 
+  onMessage("game_reset", (data) => {
+    setGameState(prev => ({
+      ...prev,
+      players: data.players,
+      currentQuestion: null,
+      submittedAnswers: [],
+      buzzerResults: [],
+      usedQuestions: new Set(),
+      nextPicker: null,
+      selectedBy: null,
+      timeRemaining: 0,
+      questionStartTime: null,
+    }));
+    setShowQuestion(false);
+    setShowAnswer(false);
+    toast({
+      title: "Game Reset",
+      description: "All scores and questions have been reset",
+    });
+  });
+
+  onMessage("reset_success", (data) => {
+    toast({
+      title: "Success",
+      description: data.message,
+    });
+    setShowResetConfirm(false);
+  });
+
   // Timer effect for countdown
   useEffect(() => {
     if (!gameState.currentQuestion || gameState.questionStartTime === null) {
@@ -444,6 +474,27 @@ export default function GameHost() {
     navigate("/");
   };
 
+  const handleResetGame = () => {
+    setShowResetConfirm(true);
+  };
+
+  const confirmResetGame = () => {
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please try refreshing.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    sendMessage({
+      type: "reset_game",
+      data: {}
+    });
+    setShowResetConfirm(false);
+  };
+
   const firstBuzzer = gameState.buzzerResults.find(b => b.isFirst);
   const sortedPlayers = [...(gameState.players || [])].sort((a, b) => b.score - a.score);
 
@@ -484,6 +535,14 @@ export default function GameHost() {
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Exit Game
+                  </Button>
+                  <Button
+                    onClick={handleResetGame}
+                    variant="outline"
+                    className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reset Game
                   </Button>
                   <Button
                     onClick={handleEndGame}
@@ -845,6 +904,32 @@ export default function GameHost() {
               onClick={confirmEndGame}
             >
               End Game
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Game Confirmation Dialog */}
+      <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Game</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reset this game? This will clear all player scores and mark all questions as unused so you can play the same game again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowResetConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmResetGame}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              Reset Game
             </Button>
           </DialogFooter>
         </DialogContent>
