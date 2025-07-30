@@ -138,13 +138,18 @@ export default function GameHost() {
   });
 
   onMessage("game_joined", (data) => {
+    console.log('Host received game_joined:', data);
     // When host joins an existing game, set the initial state
-    setGameState(prev => ({
-      ...prev,
-      roomCode: data.roomCode || prev.roomCode,
-      gameId: data.gameId,
-      players: data.players
-    }));
+    setGameState(prev => {
+      const newState = {
+        ...prev,
+        roomCode: data.roomCode || prev.roomCode,
+        gameId: data.gameId,
+        players: data.players || []
+      };
+      console.log('Setting host gameState:', newState);
+      return newState;
+    });
     
     // Request game questions and state for existing game
     sendMessage({
@@ -160,23 +165,16 @@ export default function GameHost() {
 
   // Add handler for joining as host specifically
   onMessage("host_joined", (data) => {
-    setGameState(prev => ({
-      ...prev,
-      roomCode: data.roomCode || prev.roomCode,
-      gameId: data.gameId,
-      players: data.players
-    }));
-    
-    // Request game questions and state for existing game
-    sendMessage({
-      type: "get_game_state",
-      data: { gameId: data.gameId }
-    });
-    
-    toast({
-      title: "Joined as Host",
-      description: `Room: ${data.roomCode}`,
-    });
+    // This message is broadcast to all players when a host joins
+    // The host player data is in data.player
+    if (data.player) {
+      setGameState(prev => ({
+        ...prev,
+        players: prev.players.some(p => p.id === data.player.id) 
+          ? prev.players.map(p => p.id === data.player.id ? data.player : p)
+          : [...prev.players, data.player]
+      }));
+    }
   });
 
   onMessage("game_state_loaded", (data) => {
@@ -312,8 +310,10 @@ export default function GameHost() {
 
   const handleSelectQuestion = (category: string, value: number) => {
     console.log('Selecting question:', { category, value, gameId: gameState.gameId, usedQuestions: Array.from(gameState.usedQuestions) });
+    console.log('Current gameState:', gameState);
     
     if (!gameState.gameId) {
+      console.error('No gameId available! Current state:', gameState);
       toast({
         title: "Error",
         description: "No game ID available. Please try refreshing.",
