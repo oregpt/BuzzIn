@@ -34,6 +34,8 @@ interface GameState {
   usedQuestions: Set<string>;
   nextPicker: { playerId: string; playerName: string } | null;
   selectedBy: string | null;
+  timeRemaining: number;
+  questionStartTime: number | null;
 }
 
 export default function GameHost() {
@@ -52,6 +54,8 @@ export default function GameHost() {
     usedQuestions: new Set(),
     nextPicker: null,
     selectedBy: null,
+    timeRemaining: 0,
+    questionStartTime: null,
   });
 
   const [showQuestion, setShowQuestion] = useState(false);
@@ -215,6 +219,8 @@ export default function GameHost() {
         buzzerResults: [],
         submittedAnswers: [],
         selectedBy: data.selectedBy || null,
+        timeRemaining: 15,
+        questionStartTime: Date.now(),
         // Don't automatically mark as used - only when explicitly marked
       }));
       setShowQuestion(true);
@@ -280,6 +286,8 @@ export default function GameHost() {
       ...prev,
       currentQuestion: null,
       nextPicker: data.nextPicker || null,
+      timeRemaining: 0,
+      questionStartTime: null,
       // Don't automatically add to usedQuestions here - only when explicitly marked
     }));
     setShowQuestion(false);
@@ -307,6 +315,25 @@ export default function GameHost() {
       navigate("/");
     }, 3000);
   });
+
+  // Timer effect for countdown
+  useEffect(() => {
+    if (!gameState.currentQuestion || gameState.questionStartTime === null) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - gameState.questionStartTime!) / 1000;
+      const remaining = Math.max(0, 15 - elapsed);
+      
+      setGameState(prev => ({
+        ...prev,
+        timeRemaining: remaining
+      }));
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [gameState.currentQuestion, gameState.questionStartTime]);
 
   const handleSelectQuestion = (category: string, value: number) => {
     console.log('Selecting question:', { category, value, gameId: gameState.gameId, usedQuestions: Array.from(gameState.usedQuestions) });
@@ -556,6 +583,18 @@ export default function GameHost() {
                 {gameState.selectedBy && (
                   <div className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                     Selected by {gameState.selectedBy}
+                  </div>
+                )}
+                {/* Timer Display */}
+                {gameState.timeRemaining > 0 && (
+                  <div className={`text-4xl font-bold mb-4 ${
+                    gameState.timeRemaining <= 5 
+                      ? 'text-red-500 animate-pulse' 
+                      : gameState.timeRemaining <= 10 
+                        ? 'text-orange-500' 
+                        : 'text-green-500'
+                  }`}>
+                    {Math.ceil(gameState.timeRemaining)}s
                   </div>
                 )}
                 <div className="text-black dark:text-white text-3xl md:text-4xl font-bold leading-tight">
