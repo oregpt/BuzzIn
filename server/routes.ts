@@ -43,12 +43,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   wss.on('connection', (ws: ExtendedWebSocket) => {
-    console.log('WebSocket connection established');
+    const connectionId = Math.random().toString(36).substr(2, 9);
+    console.log('WebSocket connection established, ID:', connectionId);
+    (ws as any).connectionId = connectionId;
     
     ws.on('message', async (data) => {
       try {
         const message: WSMessage = JSON.parse(data.toString());
-        console.log('Received message:', message.type, message.data, 'from playerId:', ws.playerId, 'gameId:', ws.gameId);
+        console.log('Received message:', message.type, message.data, 'from playerId:', ws.playerId, 'gameId:', ws.gameId, 'connectionId:', (ws as any).connectionId);
 
         switch (message.type) {
           case 'create_game': {
@@ -250,6 +252,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
             console.log('Sending game_joined response to host:', hostPlayer.id);
             ws.send(JSON.stringify(joinResponse));
+            
+            console.log('Host WebSocket connection established:', { playerId: hostPlayer.id, gameId: game.id, connectionId: (ws as any).connectionId });
 
             broadcastToGame(game.id, {
               type: "host_joined",
