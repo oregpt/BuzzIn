@@ -66,15 +66,8 @@ export default function GameHost() {
         roomCode: roomCodeParam,
       }));
       
-      // Send message to join as host (this will be handled by existing join_game logic)
-      sendMessage({
-        type: "join_game",
-        data: { 
-          roomCode: roomCodeParam, 
-          playerName: "Host", // Will be overridden by server for host role
-          isHost: true 
-        }
-      });
+      // This case should not happen for hosts - they should navigate with proper params
+      navigate('/');
       return;
     }
     
@@ -135,9 +128,19 @@ export default function GameHost() {
     
     toast({
       title: "Game Created!",
-      description: `Room: ${data.roomCode} | Host Code: ${data.hostCode} | Player Code: ${data.playerCode}`,
+      description: `Room: ${data.roomCode} | Host Code: ${data.hostCode}`,
       duration: 10000, // Show longer so host can note the codes
     });
+  });
+
+  onMessage("game_joined", (data) => {
+    // When host joins an existing game, set the initial state
+    setGameState(prev => ({
+      ...prev,
+      roomCode: data.roomCode || prev.roomCode,
+      gameId: data.gameId,
+      players: data.players
+    }));
   });
 
   onMessage("player_joined", (data) => {
@@ -222,7 +225,7 @@ export default function GameHost() {
       const questionKey = `${gameState.currentQuestion.category}-${gameState.currentQuestion.value}`;
       setGameState(prev => ({
         ...prev,
-        usedQuestions: new Set([...prev.usedQuestions, questionKey])
+        usedQuestions: new Set(Array.from(prev.usedQuestions).concat(questionKey))
       }));
     }
   });
@@ -239,7 +242,7 @@ export default function GameHost() {
   });
 
   const handleSelectQuestion = (category: string, value: number) => {
-    console.log('Selecting question:', { category, value, usedQuestions: [...gameState.usedQuestions] });
+    console.log('Selecting question:', { category, value, usedQuestions: Array.from(gameState.usedQuestions) });
     
     sendMessage({
       type: "select_question",
@@ -482,7 +485,7 @@ export default function GameHost() {
               {/* Question Options */}
               {gameState.currentQuestion.type === 'multiple_choice' && gameState.currentQuestion.options && (
                 <div className="space-y-4 mb-8">
-                  {(gameState.currentQuestion.options as string[]).map((option: string, index: number) => (
+                  {(gameState.currentQuestion.options as string[]).map((option, index) => (
                     <div
                       key={index}
                       className="w-full bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-600"

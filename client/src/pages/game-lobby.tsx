@@ -110,7 +110,7 @@ export default function GameLobby() {
     const isHost = data.players?.find((p: any) => p.id === data.playerId)?.isHost;
     console.log('Player isHost:', isHost, 'Navigating to:', isHost ? '/host' : '/play');
     if (isHost) {
-      navigate(`/host?game=${data.gameId}&player=${data.playerId}`);
+      navigate(`/host?game=${data.gameId}&player=${data.playerId}&room=${data.roomCode || selectedGame?.roomCode || ''}`);
     } else {
       // Get room code from server response
       const roomCode = data.roomCode || selectedGame?.roomCode || '';
