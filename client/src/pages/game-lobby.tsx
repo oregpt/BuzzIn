@@ -417,17 +417,17 @@ export default function GameLobby() {
 
       {/* Delete Game Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
-            <DialogTitle className="text-gray-900 dark:text-white text-xl">Delete Game</DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-300">
+            <DialogTitle className="text-white text-xl">Delete Game</DialogTitle>
+            <DialogDescription className="text-gray-300">
               Are you sure you want to delete "{gameToDelete?.gameName}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="deletePassword" className="text-gray-700 dark:text-gray-300">
+              <Label htmlFor="deletePassword" className="text-gray-300">
                 Site Admin Password
               </Label>
               <Input
@@ -436,9 +436,9 @@ export default function GameLobby() {
                 placeholder="Enter admin password"
                 value={deletePassword}
                 onChange={(e) => setDeletePassword(e.target.value)}
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-400">
                 Admin access required to delete games
               </p>
             </div>
@@ -448,7 +448,7 @@ export default function GameLobby() {
             <Button 
               variant="outline" 
               onClick={() => setShowDeleteDialog(false)}
-              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+              className="bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600"
             >
               Cancel
             </Button>

@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
-import { Hand, Users } from "lucide-react";
+import { Hand, Users, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/game-data";
 import type { Player, Question } from "@shared/schema";
@@ -229,11 +229,23 @@ export default function GamePlayer() {
     });
   };
 
+  const handleExitGame = () => {
+    navigate('/');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-6 max-w-lg">
         {/* Player Header */}
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg mb-6 text-center">
+        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg mb-6 text-center relative">
+          <Button
+            onClick={handleExitGame}
+            variant="ghost"
+            size="sm"
+            className="absolute top-2 right-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 w-8 h-8 p-0"
+          >
+            <X className="w-4 h-4" />
+          </Button>
           <CardContent className="pt-6">
             <h1 className="font-game text-2xl font-bold text-blue-600 dark:text-yellow-400 mb-2">
               ROOM: {playerState.roomCode}
