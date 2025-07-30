@@ -103,12 +103,12 @@ The application is structured for easy development with hot reloading and clear 
 
 ## Recent Enhancements (January 2025)
 
-### Enhanced Authentication System
-- Secure role-based authentication with unique 6-character codes
-- Host code required for game control and administration
-- Player code required for game participation
-- Codes displayed in host notifications for easy sharing
-- Database persistence of authentication codes per game
+### Simplified Authentication System (July 30, 2025)
+- **Players**: Only need name and room code to join games - no authentication codes required
+- **Hosts**: Require 6-character host code for game control and administration  
+- Room codes (4-letter) identify games for easy discovery
+- Host codes displayed in notifications for secure sharing
+- Database persistence of host authentication codes per game
 
 ### Simplified Lobby Interface (July 29, 2025)
 - Removed separate "Join as Host" and "Join by Code" cards from main lobby
