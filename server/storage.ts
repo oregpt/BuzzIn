@@ -1,7 +1,7 @@
 import { type Game, type InsertGame, type Player, type InsertPlayer, type Question, type InsertQuestion, type Buzz, type InsertBuzz, type GameAnswer, type InsertGameAnswer, games, players, questions, buzzes, gameAnswers } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 
 export interface IStorage {
   // Game methods
@@ -182,7 +182,7 @@ export class MemStorage implements IStorage {
   }
 
   async getOpenGames(): Promise<Game[]> {
-    return Array.from(this.games.values()).filter(game => game.status === "waiting");
+    return Array.from(this.games.values()).filter(game => game.status === "waiting" || game.status === "active");
   }
 
   async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
@@ -359,7 +359,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOpenGames(): Promise<Game[]> {
-    return await db.select().from(games).where(eq(games.status, "waiting"));
+    return await db.select().from(games).where(or(eq(games.status, "waiting"), eq(games.status, "active")));
   }
 
   // Player methods

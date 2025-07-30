@@ -263,7 +263,7 @@ export default function GameHost() {
   onMessage("answer_marked", (data) => {
     setGameState(prev => ({
       ...prev,
-      players: prev.players.map(p => 
+      players: (prev.players || []).map(p => 
         p.id === data.playerId 
           ? { ...p, score: data.newScore }
           : p
@@ -418,7 +418,7 @@ export default function GameHost() {
   };
 
   const firstBuzzer = gameState.buzzerResults.find(b => b.isFirst);
-  const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
+  const sortedPlayers = [...(gameState.players || [])].sort((a, b) => b.score - a.score);
 
   return (
     <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
@@ -433,7 +433,7 @@ export default function GameHost() {
                 </h1>
                 <div className="flex items-center text-gray-600 dark:text-gray-300">
                   <Users className="mr-2" />
-                  <span>{gameState.players.length} Players</span>
+                  <span>{(gameState.players || []).length} Players</span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
