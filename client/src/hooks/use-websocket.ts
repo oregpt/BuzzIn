@@ -5,6 +5,7 @@ import type { WSMessage, WSResponse } from '@shared/schema';
 let globalWs: WebSocket | null = null;
 let connectionCount = 0;
 let isConnecting = false;
+let globalMessageHandlers = new Map<string, Set<(data: any) => void>>();
 
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
@@ -66,16 +67,21 @@ export function useWebSocket() {
     globalWs.onmessage = (event) => {
       try {
         const message: WSResponse = JSON.parse(event.data);
-        console.log(`[${instanceId.current}] Received WebSocket message:`, message);
-        setLastMessage(message);
+        console.log(`[Global] Received WebSocket message:`, message);
         
-        // Broadcast to all active message handlers
-        const handler = messageHandlers.current.get(message.type);
-        if (handler) {
-          handler(message.data);
+        // Broadcast to ALL registered handlers for this message type
+        const handlers = globalMessageHandlers.get(message.type);
+        if (handlers) {
+          handlers.forEach(handler => {
+            try {
+              handler(message.data);
+            } catch (error) {
+              console.error('Error in message handler:', error);
+            }
+          });
         }
       } catch (error) {
-        console.error(`[${instanceId.current}] Failed to parse WebSocket message:`, error);
+        console.error('Failed to parse WebSocket message:', error);
       }
     };
   }, []);
@@ -84,13 +90,19 @@ export function useWebSocket() {
     connectionCount--;
     console.log(`[${instanceId.current}] Disconnecting... Remaining instances:`, connectionCount);
     
-    // Only actually close the connection if no other components are using it
-    if (connectionCount <= 0 && globalWs) {
-      console.log(`[${instanceId.current}] Closing global WebSocket connection`);
-      globalWs.close();
-      globalWs = null;
-      connectionCount = 0;
-    }
+    // Clean up this instance's message handlers
+    messageHandlers.current.forEach((handler, type) => {
+      const handlers = globalMessageHandlers.get(type);
+      if (handlers) {
+        handlers.delete(handler);
+        if (handlers.size === 0) {
+          globalMessageHandlers.delete(type);
+        }
+      }
+    });
+    
+    // Never close the global connection during navigation - keep it alive
+    // Only close if explicitly requested or on page unload
     setIsConnected(false);
   }, []);
 
@@ -117,14 +129,33 @@ export function useWebSocket() {
   const onMessage = useCallback((type: string, handler: (data: any) => void) => {
     messageHandlers.current.set(type, handler);
     
+    // Add to global handlers
+    if (!globalMessageHandlers.has(type)) {
+      globalMessageHandlers.set(type, new Set());
+    }
+    globalMessageHandlers.get(type)!.add(handler);
+    
     // Return cleanup function
     return () => {
       messageHandlers.current.delete(type);
+      const handlers = globalMessageHandlers.get(type);
+      if (handlers) {
+        handlers.delete(handler);
+        if (handlers.size === 0) {
+          globalMessageHandlers.delete(type);
+        }
+      }
     };
   }, []);
 
   useEffect(() => {
     connect();
+    
+    // Update connection state if global connection exists
+    if (globalWs) {
+      setIsConnected(globalWs.readyState === WebSocket.OPEN);
+    }
+    
     return disconnect;
   }, [connect, disconnect]);
 
