@@ -69,11 +69,20 @@ export default function GameHost() {
   const [showEditQuestions, setShowEditQuestions] = useState(false);
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<{
+    question: string;
+    correctAnswer: string;
+    category: string;
+    value: number;
+    type: "specific_answer" | "multiple_choice" | "true_false";
+    options: string[];
+  }>({
     question: "",
     correctAnswer: "",
     category: "",
-    value: 100
+    value: 100,
+    type: "specific_answer",
+    options: []
   });
 
   // Initialize from game setup or URL params
@@ -259,16 +268,25 @@ export default function GameHost() {
 
   onMessage("answer_submitted", (data) => {
     console.log('Answer submitted:', data);
-    setGameState(prev => ({
-      ...prev,
-      submittedAnswers: [...prev.submittedAnswers, {
-        playerId: data.playerId,
-        playerName: data.playerName,
-        answer: data.answer,
-        submissionOrder: data.submissionOrder,
-        submissionTime: data.submissionTime
-      }]
-    }));
+    setGameState(prev => {
+      // Prevent duplicate submissions - check if this player already submitted
+      const existingAnswer = prev.submittedAnswers.find(answer => answer.playerId === data.playerId);
+      if (existingAnswer) {
+        console.log('Duplicate answer submission prevented for player:', data.playerId);
+        return prev; // Don't add duplicate
+      }
+      
+      return {
+        ...prev,
+        submittedAnswers: [...prev.submittedAnswers, {
+          playerId: data.playerId,
+          playerName: data.playerName,
+          answer: data.answer,
+          submissionOrder: data.submissionOrder,
+          submissionTime: data.submissionTime
+        }]
+      };
+    });
   });
 
   onMessage("all_answers_collected", (data) => {
@@ -542,7 +560,9 @@ export default function GameHost() {
       question: question.question,
       correctAnswer: question.correctAnswer,
       category: question.category,
-      value: question.value
+      value: question.value,
+      type: (question.type as "specific_answer" | "multiple_choice" | "true_false") || "specific_answer",
+      options: question.options ? [...(question.options as string[])] : ["", "", "", ""]
     });
   };
 
@@ -555,7 +575,10 @@ export default function GameHost() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          ...editForm,
+          options: editForm.type === "multiple_choice" ? editForm.options : null
+        }),
       });
 
       if (response.ok) {
@@ -1195,11 +1218,59 @@ export default function GameHost() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Correct Answer</label>
+                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Question Type</label>
+                <Select 
+                  value={editForm.type} 
+                  onValueChange={(value: "specific_answer" | "multiple_choice" | "true_false") => 
+                    setEditForm(prev => ({ 
+                      ...prev, 
+                      type: value,
+                      options: value === "multiple_choice" ? ["", "", "", ""] : []
+                    }))
+                  }
+                >
+                  <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                    <SelectItem value="specific_answer" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Specific Answer</SelectItem>
+                    <SelectItem value="multiple_choice" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Multiple Choice</SelectItem>
+                    <SelectItem value="true_false" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">True/False</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {editForm.type === "multiple_choice" && (
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black dark:text-white">Multiple Choice Options</label>
+                  <div className="space-y-2">
+                    {editForm.options.map((option, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-black dark:text-white font-medium w-6">{String.fromCharCode(65 + index)}.</span>
+                        <Input
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...editForm.options];
+                            newOptions[index] = e.target.value;
+                            setEditForm(prev => ({ ...prev, options: newOptions }));
+                          }}
+                          placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                          className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium mb-2 text-black dark:text-white">
+                  Correct Answer {editForm.type === "multiple_choice" ? "(Enter A, B, C, or D)" : ""}
+                </label>
                 <Input
                   value={editForm.correctAnswer}
                   onChange={(e) => setEditForm(prev => ({ ...prev, correctAnswer: e.target.value }))}
-                  placeholder="Enter the correct answer..."
+                  placeholder={editForm.type === "multiple_choice" ? "A" : "Enter the correct answer..."}
                   className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 />
               </div>
