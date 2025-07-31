@@ -1214,7 +1214,7 @@ export default function GameHost() {
                   value={editForm.question}
                   onChange={(e) => setEditForm(prev => ({ ...prev, question: e.target.value }))}
                   placeholder="Enter the question..."
-                  className="min-h-[100px] bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                  className="min-h-[100px] bg-gray-800 border-gray-600 text-white placeholder:text-gray-400"
                 />
               </div>
               <div>
@@ -1255,7 +1255,7 @@ export default function GameHost() {
                             setEditForm(prev => ({ ...prev, options: newOptions }));
                           }}
                           placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                          className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                          className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400"
                         />
                       </div>
                     ))}
@@ -1271,7 +1271,7 @@ export default function GameHost() {
                   value={editForm.correctAnswer}
                   onChange={(e) => setEditForm(prev => ({ ...prev, correctAnswer: e.target.value }))}
                   placeholder={editForm.type === "multiple_choice" ? "A" : "Enter the correct answer..."}
-                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                  className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-400"
                 />
               </div>
             </div>
