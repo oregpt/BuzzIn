@@ -1091,16 +1091,16 @@ export default function GameHost() {
       {/* Edit Questions Dialog */}
       {showEditQuestions && (
         <Dialog open={showEditQuestions} onOpenChange={setShowEditQuestions}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
             <DialogHeader>
-              <DialogTitle>Edit Questions</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-black dark:text-white">Edit Questions</DialogTitle>
+              <DialogDescription className="text-gray-600 dark:text-gray-400">
                 Click any question to edit it. Changes will reset the game.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
               {gameState.categories.map(category => (
-                <div key={category} className="border rounded-lg p-4">
+                <div key={category} className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
                   <h3 className="font-bold text-lg mb-3 text-blue-600 dark:text-yellow-400">
                     {category}
                   </h3>
@@ -1110,21 +1110,21 @@ export default function GameHost() {
                         q.category === category && q.value === value
                       );
                       return (
-                        <div key={value} className="border rounded p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                        <div key={value} className="border border-gray-200 dark:border-gray-600 rounded p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer bg-white dark:bg-gray-800"
                              onClick={() => question && handleStartEditQuestion(question)}>
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <div className="font-medium text-green-600 dark:text-green-400">
                                 {formatCurrency(value)}
                               </div>
-                              <div className="text-sm mt-1">
+                              <div className="text-sm mt-1 text-black dark:text-white">
                                 {question?.question || 'No question found'}
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">
+                              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                                 Answer: {question?.correctAnswer || 'No answer'}
                               </div>
                             </div>
-                            <Edit className="h-4 w-4 text-gray-400" />
+                            <Edit className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           </div>
                         </div>
                       );
@@ -1134,7 +1134,7 @@ export default function GameHost() {
               ))}
             </div>
             <DialogFooter>
-              <Button onClick={() => setShowEditQuestions(false)}>
+              <Button onClick={() => setShowEditQuestions(false)} className="bg-blue-600 hover:bg-blue-700 text-white">
                 Close
               </Button>
             </DialogFooter>
@@ -1145,69 +1145,70 @@ export default function GameHost() {
       {/* Edit Individual Question Dialog */}
       {editingQuestion && (
         <Dialog open={!!editingQuestion} onOpenChange={() => setEditingQuestion(null)}>
-          <DialogContent>
+          <DialogContent className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
             <DialogHeader>
-              <DialogTitle>Edit Question</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-black dark:text-white">Edit Question</DialogTitle>
+              <DialogDescription className="text-gray-600 dark:text-gray-400">
                 {editingQuestion.category} - {formatCurrency(editingQuestion.value)}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Category</label>
+                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Category</label>
                 <Select 
                   value={editForm.category} 
                   onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                     {gameState.categories.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      <SelectItem key={cat} value={cat} className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">{cat}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Value</label>
+                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Value</label>
                 <Select 
                   value={editForm.value.toString()} 
                   onValueChange={(value) => setEditForm(prev => ({ ...prev, value: parseInt(value) }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                     {VALUES.map(val => (
-                      <SelectItem key={val} value={val.toString()}>{formatCurrency(val)}</SelectItem>
+                      <SelectItem key={val} value={val.toString()} className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">{formatCurrency(val)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Question</label>
+                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Question</label>
                 <Textarea
                   value={editForm.question}
                   onChange={(e) => setEditForm(prev => ({ ...prev, question: e.target.value }))}
                   placeholder="Enter the question..."
-                  className="min-h-[100px]"
+                  className="min-h-[100px] bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Correct Answer</label>
+                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Correct Answer</label>
                 <Input
                   value={editForm.correctAnswer}
                   onChange={(e) => setEditForm(prev => ({ ...prev, correctAnswer: e.target.value }))}
                   placeholder="Enter the correct answer..."
+                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingQuestion(null)}>
+              <Button variant="outline" onClick={() => setEditingQuestion(null)} className="border-gray-300 dark:border-gray-600 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
                 Cancel
               </Button>
-              <Button onClick={handleSaveQuestion}>
+              <Button onClick={handleSaveQuestion} className="bg-blue-600 hover:bg-blue-700 text-white">
                 Save Question
               </Button>
             </DialogFooter>
