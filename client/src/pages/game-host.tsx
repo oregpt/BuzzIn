@@ -3,9 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
-import { Trophy, Users, Pause, Square, Check, X, Star, ArrowLeft, RotateCcw } from "lucide-react";
+import { Trophy, Users, Pause, Square, Check, X, Star, ArrowLeft, RotateCcw, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_CATEGORIES, VALUES, formatCurrency } from "@/lib/game-data";
 import type { Player, Question } from "@shared/schema";
 
@@ -63,6 +66,15 @@ export default function GameHost() {
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showScores, setShowScores] = useState(false);
+  const [showEditQuestions, setShowEditQuestions] = useState(false);
+  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [editForm, setEditForm] = useState({
+    question: "",
+    correctAnswer: "",
+    category: "",
+    value: 100
+  });
 
   // Initialize from game setup or URL params
   useEffect(() => {
@@ -495,6 +507,85 @@ export default function GameHost() {
     setShowResetConfirm(false);
   };
 
+  const handleEditQuestions = async () => {
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please try refreshing.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/games/${gameState.gameId}/questions`);
+      if (response.ok) {
+        const questions = await response.json();
+        setAllQuestions(questions);
+        setShowEditQuestions(true);
+      } else {
+        throw new Error('Failed to fetch questions');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load questions for editing.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleStartEditQuestion = (question: Question) => {
+    setEditingQuestion(question);
+    setEditForm({
+      question: question.question,
+      correctAnswer: question.correctAnswer,
+      category: question.category,
+      value: question.value
+    });
+  };
+
+  const handleSaveQuestion = async () => {
+    if (!editingQuestion || !gameState.gameId) return;
+
+    try {
+      const response = await fetch(`/api/questions/${editingQuestion.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm),
+      });
+
+      if (response.ok) {
+        const updatedQuestion = await response.json();
+        setAllQuestions(prev => prev.map(q => 
+          q.id === editingQuestion.id ? updatedQuestion : q
+        ));
+        setEditingQuestion(null);
+        
+        toast({
+          title: "Question Updated",
+          description: "Question has been updated successfully. Game will be reset.",
+        });
+
+        // Reset the game after editing questions
+        sendMessage({
+          type: "reset_game",
+          data: {}
+        });
+      } else {
+        throw new Error('Failed to update question');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update question.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const firstBuzzer = gameState.buzzerResults.find(b => b.isFirst);
   const sortedPlayers = [...(gameState.players || [])].sort((a, b) => b.score - a.score);
 
@@ -535,6 +626,14 @@ export default function GameHost() {
                   >
                     <Trophy className="mr-2 h-4 w-4" />
                     View Scores
+                  </Button>
+                  <Button
+                    onClick={handleEditQuestions}
+                    variant="outline"
+                    className="border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900"
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Questions
                   </Button>
                   <Button
                     onClick={handleExitGame}
@@ -987,6 +1086,133 @@ export default function GameHost() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Questions Dialog */}
+      {showEditQuestions && (
+        <Dialog open={showEditQuestions} onOpenChange={setShowEditQuestions}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Questions</DialogTitle>
+              <DialogDescription>
+                Click any question to edit it. Changes will reset the game.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4">
+              {DEFAULT_CATEGORIES.map(category => (
+                <div key={category} className="border rounded-lg p-4">
+                  <h3 className="font-bold text-lg mb-3 text-blue-600 dark:text-yellow-400">
+                    {category}
+                  </h3>
+                  <div className="grid gap-2">
+                    {VALUES.map(value => {
+                      const question = allQuestions.find(q => 
+                        q.category === category && q.value === value
+                      );
+                      return (
+                        <div key={value} className="border rounded p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                             onClick={() => question && handleStartEditQuestion(question)}>
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="font-medium text-green-600 dark:text-green-400">
+                                {formatCurrency(value)}
+                              </div>
+                              <div className="text-sm mt-1">
+                                {question?.question || 'No question found'}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Answer: {question?.correctAnswer || 'No answer'}
+                              </div>
+                            </div>
+                            <Edit className="h-4 w-4 text-gray-400" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowEditQuestions(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Individual Question Dialog */}
+      {editingQuestion && (
+        <Dialog open={!!editingQuestion} onOpenChange={() => setEditingQuestion(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Question</DialogTitle>
+              <DialogDescription>
+                {editingQuestion.category} - {formatCurrency(editingQuestion.value)}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Category</label>
+                <Select 
+                  value={editForm.category} 
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEFAULT_CATEGORIES.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Value</label>
+                <Select 
+                  value={editForm.value.toString()} 
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, value: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VALUES.map(val => (
+                      <SelectItem key={val} value={val.toString()}>{formatCurrency(val)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Question</label>
+                <Textarea
+                  value={editForm.question}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, question: e.target.value }))}
+                  placeholder="Enter the question..."
+                  className="min-h-[100px]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Correct Answer</label>
+                <Input
+                  value={editForm.correctAnswer}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                  placeholder="Enter the correct answer..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingQuestion(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveQuestion}>
+                Save Question
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

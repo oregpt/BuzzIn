@@ -662,6 +662,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get questions for a specific game
+  app.get('/api/games/:gameId/questions', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const questions = await storage.getQuestionsByGameId(gameId);
+      res.json(questions);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      res.status(500).json({ error: 'Failed to fetch questions' });
+    }
+  });
+
   // Delete game endpoint
   app.delete('/api/games/:id', async (req, res) => {
     try {
@@ -716,6 +728,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateSchema = z.object({
         question: z.string().optional(),
         correctAnswer: z.string().optional(),
+        category: z.string().optional(),
+        value: z.number().optional(),
         type: z.enum(['multiple_choice', 'true_false', 'specific_answer']).optional(),
         options: z.array(z.string()).nullable().optional(),
       });
