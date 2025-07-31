@@ -1168,48 +1168,48 @@ export default function GameHost() {
       {/* Edit Individual Question Dialog */}
       {editingQuestion && (
         <Dialog open={!!editingQuestion} onOpenChange={() => setEditingQuestion(null)}>
-          <DialogContent className="bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
+          <DialogContent className="bg-gray-900 border-gray-600">
             <DialogHeader>
-              <DialogTitle className="text-black dark:text-white">Edit Question</DialogTitle>
-              <DialogDescription className="text-gray-600 dark:text-gray-400">
+              <DialogTitle className="text-white">Edit Question</DialogTitle>
+              <DialogDescription className="text-gray-300">
                 {editingQuestion.category} - {formatCurrency(editingQuestion.value)}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Category</label>
+                <label className="block text-sm font-medium mb-2 text-white">Category</label>
                 <Select 
                   value={editForm.category} 
                   onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white">
+                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                  <SelectContent className="bg-gray-800 border-gray-600">
                     {gameState.categories.map(cat => (
-                      <SelectItem key={cat} value={cat} className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">{cat}</SelectItem>
+                      <SelectItem key={cat} value={cat} className="text-white hover:bg-gray-700">{cat}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Value</label>
+                <label className="block text-sm font-medium mb-2 text-white">Value</label>
                 <Select 
                   value={editForm.value.toString()} 
                   onValueChange={(value) => setEditForm(prev => ({ ...prev, value: parseInt(value) }))}
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white">
+                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                  <SelectContent className="bg-gray-800 border-gray-600">
                     {VALUES.map(val => (
-                      <SelectItem key={val} value={val.toString()} className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">{formatCurrency(val)}</SelectItem>
+                      <SelectItem key={val} value={val.toString()} className="text-white hover:bg-gray-700">{formatCurrency(val)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Question</label>
+                <label className="block text-sm font-medium mb-2 text-white">Question</label>
                 <Textarea
                   value={editForm.question}
                   onChange={(e) => setEditForm(prev => ({ ...prev, question: e.target.value }))}
@@ -1218,7 +1218,7 @@ export default function GameHost() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-black dark:text-white">Question Type</label>
+                <label className="block text-sm font-medium mb-2 text-white">Question Type</label>
                 <Select 
                   value={editForm.type} 
                   onValueChange={(value: "specific_answer" | "multiple_choice" | "true_false") => 
@@ -1229,24 +1229,24 @@ export default function GameHost() {
                     }))
                   }
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-black dark:text-white">
+                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                    <SelectItem value="specific_answer" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Specific Answer</SelectItem>
-                    <SelectItem value="multiple_choice" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Multiple Choice</SelectItem>
-                    <SelectItem value="true_false" className="text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">True/False</SelectItem>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="specific_answer" className="text-white hover:bg-gray-700">Specific Answer</SelectItem>
+                    <SelectItem value="multiple_choice" className="text-white hover:bg-gray-700">Multiple Choice</SelectItem>
+                    <SelectItem value="true_false" className="text-white hover:bg-gray-700">True/False</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               {editForm.type === "multiple_choice" && (
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-black dark:text-white">Multiple Choice Options</label>
+                  <label className="block text-sm font-medium mb-2 text-white">Multiple Choice Options</label>
                   <div className="space-y-2">
                     {editForm.options.map((option, index) => (
                       <div key={index} className="flex items-center gap-2">
-                        <span className="text-black dark:text-white font-medium w-6">{String.fromCharCode(65 + index)}.</span>
+                        <span className="text-white font-medium w-6">{String.fromCharCode(65 + index)}.</span>
                         <Input
                           value={option}
                           onChange={(e) => {
@@ -1264,7 +1264,7 @@ export default function GameHost() {
               )}
               
               <div>
-                <label className="block text-sm font-medium mb-2 text-black dark:text-white">
+                <label className="block text-sm font-medium mb-2 text-white">
                   Correct Answer {editForm.type === "multiple_choice" ? "(Enter A, B, C, or D)" : ""}
                 </label>
                 <Input
@@ -1276,7 +1276,7 @@ export default function GameHost() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingQuestion(null)} className="border-gray-300 dark:border-gray-600 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Button variant="outline" onClick={() => setEditingQuestion(null)} className="border-gray-600 text-white hover:bg-gray-700">
                 Cancel
               </Button>
               <Button onClick={handleSaveQuestion} className="bg-blue-600 hover:bg-blue-700 text-white">
