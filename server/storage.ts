@@ -41,6 +41,7 @@ export interface IStorage {
   generateAuthCode(): string;
   initializeDefaultQuestions(gameId: string, categories: string[]): Promise<void>;
   resetGame(gameId: string): Promise<boolean>;
+  clearAllPlayers(gameId: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -633,6 +634,23 @@ export class DatabaseStorage implements IStorage {
       return true;
     } catch (error) {
       console.error('Error resetting game:', error);
+      return false;
+    }
+  }
+
+  async clearAllPlayers(gameId: string): Promise<boolean> {
+    try {
+      // Delete all non-host players from the game
+      await db.delete(players).where(
+        and(
+          eq(players.gameId, gameId),
+          eq(players.isHost, false)
+        )
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error clearing players:', error);
       return false;
     }
   }

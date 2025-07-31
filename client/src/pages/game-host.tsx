@@ -509,6 +509,53 @@ export default function GameHost() {
     setShowResetConfirm(true);
   };
 
+  const handleClearAllPlayers = async () => {
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/games/${gameState.gameId}/clear-players`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Players Cleared",
+          description: "All players have been removed from the game.",
+        });
+
+        // Update local state to remove all non-host players
+        setGameState(prev => ({
+          ...prev,
+          players: prev.players.filter(player => player.isHost)
+        }));
+
+        // Notify via WebSocket that players were cleared
+        sendMessage({
+          type: "clear_players",
+          data: { gameId: gameState.gameId }
+        });
+      } else {
+        throw new Error('Failed to clear players');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear players.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const confirmResetGame = () => {
     if (!gameState.gameId) {
       toast({
@@ -674,6 +721,14 @@ export default function GameHost() {
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Reset Game
+                  </Button>
+                  <Button
+                    onClick={handleClearAllPlayers}
+                    variant="outline"
+                    className="border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900"
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Clear All Players
                   </Button>
                   <Button
                     onClick={handleEndGame}

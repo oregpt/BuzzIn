@@ -613,6 +613,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             break;
           }
+
+          case 'clear_players': {
+            console.log('Processing clear_players:', { gameId: ws.gameId, playerId: ws.playerId });
+            if (!ws.gameId) {
+              console.log('No gameId found for clear_players');
+              break;
+            }
+
+            // Clear all non-host players
+            const success = await storage.clearAllPlayers(ws.gameId);
+            
+            if (success) {
+              // Get remaining players (should only be host)
+              const remainingPlayers = await storage.getPlayersByGameId(ws.gameId);
+              
+              // Disconnect all non-host player websockets
+              const gamePlayerIds = gameConnections.get(ws.gameId);
+              if (gamePlayerIds) {
+                // Create array of player IDs to remove (avoid concurrent modification)
+                const playersToRemove = Array.from(gamePlayerIds).filter(playerId => {
+                  const playerData = remainingPlayers.find(p => p.id === playerId);
+                  return !playerData?.isHost;
+                });
+                
+                // Remove non-host players from connections
+                playersToRemove.forEach(playerId => {
+                  const playerWs = connections.get(playerId);
+                  if (playerWs && playerWs.readyState === WebSocket.OPEN) {
+                    playerWs.send(JSON.stringify({
+                      type: "players_cleared",
+                      data: { message: "All players have been cleared by the host" }
+                    }));
+                    playerWs.close();
+                  }
+                  connections.delete(playerId);
+                  gamePlayerIds.delete(playerId);
+                });
+              }
+              
+              // Broadcast to remaining players (host)
+              broadcastToGame(ws.gameId, {
+                type: "players_cleared",
+                data: { 
+                  players: remainingPlayers,
+                  message: "All players have been cleared"
+                }
+              });
+
+              sendToPlayer(ws.playerId || '', {
+                type: "clear_players_success",
+                data: { message: "Players cleared successfully" }
+              });
+            } else {
+              sendToPlayer(ws.playerId || '', {
+                type: "error",
+                data: { message: "Failed to clear players" }
+              });
+            }
+            break;
+          }
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
@@ -715,6 +775,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error resetting game:', error);
       res.status(500).json({ error: 'Failed to reset game' });
+    }
+  });
+
+  // Clear all players endpoint
+  app.post('/api/games/:id/clear-players', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({ error: 'Game ID is required' });
+      }
+
+      const success = await storage.clearAllPlayers(id);
+      
+      if (success) {
+        res.json({ message: 'Players cleared successfully' });
+      } else {
+        res.status(404).json({ error: 'Game not found' });
+      }
+    } catch (error) {
+      console.error('Error clearing players:', error);
+      res.status(500).json({ error: 'Failed to clear players' });
     }
   });
 
