@@ -153,7 +153,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           case 'join_game': {
-            const { roomCode, playerName } = message.data;
+            const { roomCode, playerName, isHost, hostCode, hostName } = message.data;
+            
+            // If this is a host joining, redirect to host logic
+            if (isHost) {
+              // Handle as host join
+              const game = await storage.getGameByRoomCode(roomCode);
+              
+              if (!game) {
+                ws.send(JSON.stringify({
+                  type: "error",
+                  data: { message: "Game not found" }
+                }));
+                break;
+              }
+
+              // Validate host code
+              if (hostCode !== game.hostCode) {
+                ws.send(JSON.stringify({
+                  type: "error",
+                  data: { message: "Invalid host code" }
+                }));
+                break;
+              }
+
+              // Create or update host player entry
+              const existingPlayers = await storage.getPlayersByGameId(game.id);
+              let hostPlayer = existingPlayers.find(p => p.isHost);
+
+              if (!hostPlayer) {
+                hostPlayer = await storage.createPlayer({
+                  gameId: game.id,
+                  name: hostName || game.hostName,
+                  score: 0,
+                  isHost: true,
+                  socketId: null,
+                });
+              }
+
+              ws.playerId = hostPlayer.id;
+              ws.gameId = game.id;
+              connections.set(hostPlayer.id, ws);
+              
+              if (!gameConnections.has(game.id)) {
+                gameConnections.set(game.id, new Set());
+              }
+              gameConnections.get(game.id)!.add(hostPlayer.id);
+
+              const allPlayers = await storage.getPlayersByGameId(game.id);
+              const allQuestions = await storage.getQuestionsByGameId(game.id);
+
+              ws.send(JSON.stringify({
+                type: "game_joined",
+                data: { 
+                  playerId: hostPlayer.id, 
+                  gameId: game.id, 
+                  players: allPlayers, 
+                  roomCode: game.roomCode,
+                  categories: game.categories,
+                  questions: allQuestions
+                }
+              }));
+
+              broadcastToGame(game.id, {
+                type: "host_joined",
+                data: { player: hostPlayer }
+              });
+              break;
+            }
+
+            // Regular player join logic
             const game = await storage.getGameByRoomCode(roomCode);
             
             if (!game) {
