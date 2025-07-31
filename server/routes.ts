@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const joinResponse: WSResponse = {
               type: "game_joined",
-              data: { playerId: hostPlayer.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode }
+              data: { playerId: hostPlayer.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode, categories: game.categories }
             };
             console.log('Sending game_joined response to host:', hostPlayer.id);
             ws.send(JSON.stringify(joinResponse));

@@ -103,6 +103,13 @@ The application is structured for easy development with hot reloading and clear 
 
 ## Recent Enhancements (January 2025)
 
+### Question Editing System (July 31, 2025)
+- **Complete Question Editing**: Hosts can now edit questions, categories, values, and answers after game creation
+- **Game Reset Integration**: Question changes automatically reset the game (clearing scores and marking all questions unused)
+- **Category Management Fix**: Fixed critical bug where game categories reverted to defaults when host rejoined
+- **Live Question Browser**: Questions organized by category with current values displayed for easy editing
+- **Backend API**: Full CRUD operations for questions with validation and error handling
+
 ### Simplified Authentication System (July 30, 2025)
 - **Players**: Only need name and room code to join games - no authentication codes required
 - **Hosts**: Require 6-character host code for game control and administration  

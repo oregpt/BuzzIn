@@ -49,7 +49,7 @@ export default function GameHost() {
   const [gameState, setGameState] = useState<GameState>({
     roomCode: "",
     gameId: "",
-    categories: DEFAULT_CATEGORIES,
+    categories: [], // Will be loaded from game data
     players: [],
     currentQuestion: null,
     buzzerResults: [],
@@ -136,7 +136,7 @@ export default function GameHost() {
   onMessage("game_created", (data) => {
     // Get categories from setup if available
     const storedCategories = localStorage.getItem('categories');
-    const categories = storedCategories ? JSON.parse(storedCategories) : DEFAULT_CATEGORIES;
+    const categories = storedCategories ? JSON.parse(storedCategories) : [];
     
     setGameState(prev => ({
       ...prev,
@@ -163,6 +163,7 @@ export default function GameHost() {
         ...prev,
         roomCode: data.roomCode || prev.roomCode,
         gameId: data.gameId,
+        categories: data.categories || prev.categories, // Use game's actual categories
         players: data.players || []
       };
       console.log('Setting host gameState:', newState);
@@ -1098,7 +1099,7 @@ export default function GameHost() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
-              {DEFAULT_CATEGORIES.map(category => (
+              {gameState.categories.map(category => (
                 <div key={category} className="border rounded-lg p-4">
                   <h3 className="font-bold text-lg mb-3 text-blue-600 dark:text-yellow-400">
                     {category}
@@ -1162,7 +1163,7 @@ export default function GameHost() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DEFAULT_CATEGORIES.map(cat => (
+                    {gameState.categories.map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
                   </SelectContent>
