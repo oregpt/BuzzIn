@@ -216,6 +216,11 @@ export default function GameHost() {
       }
     });
 
+    // Set all questions for editing functionality
+    if (data.questions) {
+      setAllQuestions(data.questions);
+    }
+
     setGameState(prev => ({
       ...prev,
       categories: data.categories || prev.categories,
@@ -747,43 +752,49 @@ export default function GameHost() {
         {/* Game Board Grid */}
         <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 mb-6">
           <CardContent className="pt-6">
-            <div className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}>
-              {/* Category Headers */}
-              {gameState.categories.map(category => (
-                <div
-                  key={category}
-                  className="bg-blue-600 dark:bg-gray-800 text-white p-4 rounded-lg text-center font-bold text-sm md:text-base"
-                >
-                  {category}
-                </div>
-              ))}
+            {gameState.categories.length > 0 ? (
+              <div className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}>
+                {/* Category Headers */}
+                {gameState.categories.map(category => (
+                  <div
+                    key={category}
+                    className="bg-blue-600 dark:bg-gray-800 text-white p-4 rounded-lg text-center font-bold text-sm md:text-base"
+                  >
+                    {category}
+                  </div>
+                ))}
 
-              {/* Question Cards */}
-              {VALUES.map(value => 
-                gameState.categories.map(category => {
-                  const questionKey = `${category}-${value}`;
-                  // For now, let's use the questionKey format for consistency
-                  const isUsed = gameState.usedQuestions.has(questionKey);
-                  
-                  return (
-                    <Button
-                      key={questionKey}
-                      onClick={() => handleSelectQuestion(category, value)}
-                      disabled={isUsed}
-                      className={`
-                        font-game font-bold text-2xl md:text-3xl p-6 rounded-lg min-h-[80px] flex items-center justify-center
-                        ${isUsed 
-                          ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 opacity-50 cursor-not-allowed' 
-                          : 'bg-yellow-400 dark:bg-yellow-500 text-black hover:bg-yellow-500 dark:hover:bg-yellow-400 transition-all duration-200'
-                        }
-                      `}
-                    >
-                      {isUsed ? 'USED' : formatCurrency(value)}
-                    </Button>
-                  );
-                })
-              )}
-            </div>
+                {/* Question Cards */}
+                {VALUES.map(value => 
+                  gameState.categories.map(category => {
+                    const questionKey = `${category}-${value}`;
+                    // For now, let's use the questionKey format for consistency
+                    const isUsed = gameState.usedQuestions.has(questionKey);
+                    
+                    return (
+                      <Button
+                        key={questionKey}
+                        onClick={() => handleSelectQuestion(category, value)}
+                        disabled={isUsed}
+                        className={`
+                          font-game font-bold text-2xl md:text-3xl p-6 rounded-lg min-h-[80px] flex items-center justify-center
+                          ${isUsed 
+                            ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 opacity-50 cursor-not-allowed' 
+                            : 'bg-yellow-400 dark:bg-yellow-500 text-black hover:bg-yellow-500 dark:hover:bg-yellow-400 transition-all duration-200'
+                          }
+                        `}
+                      >
+                        {isUsed ? 'USED' : formatCurrency(value)}
+                      </Button>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                Loading game board...
+              </div>
+            )}
           </CardContent>
         </Card>
 
