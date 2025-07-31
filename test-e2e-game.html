@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>E2E Game Test - REPLIT</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .player { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+        .score { font-weight: bold; color: #007bff; }
+        .correct { color: green; }
+        .incorrect { color: red; }
+        button { margin: 5px; padding: 8px 15px; }
+        #log { background: #f8f9fa; padding: 10px; margin: 10px 0; height: 200px; overflow-y: scroll; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>End-to-End Test: REPLIT Game (30 Questions)</h1>
+    
+    <div class="test-section">
+        <h2>Test Configuration</h2>
+        <p><strong>Game:</strong> REPLIT</p>
+        <p><strong>Host Code:</strong> REPLIT</p>
+        <p><strong>Room Code:</strong> REPL</p>
+        <p><strong>Players:</strong> 4 (Alice, Bob, Charlie, Diana)</p>
+        <p><strong>Scoring Plan:</strong> Alice & Bob always correct (+points), Charlie & Diana always incorrect (-points)</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="startTest()">Start Full E2E Test</button>
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="stopTest()">Stop Test</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Live Test Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Current Status</h2>
+        <div id="status">Ready to start test...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Player Scores (Live Updates)</h2>
+        <div id="scores">
+            <div class="player">Alice: <span class="score">$0</span></div>
+            <div class="player">Bob: <span class="score">$0</span></div>
+            <div class="player">Charlie: <span class="score">$0</span></div>
+            <div class="player">Diana: <span class="score">$0</span></div>
+        </div>
+    </div>
+
+    <script>
+        let testRunning = false;
+        let connections = [];
+        let hostWs = null;
+        let playerWs = [];
+        let gameState = {
+            gameId: null,
+            roomCode: 'REPL',
+            hostCode: 'REPLIT',
+            players: [],
+            currentQuestion: null,
+            scores: { Alice: 0, Bob: 0, Charlie: 0, Diana: 0 },
+            questionsPlayed: 0
+        };
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(status) {
+            document.getElementById('status').innerHTML = status;
+        }
+
+        function updateScores() {
+            const scoresDiv = document.getElementById('scores');
+            scoresDiv.innerHTML = `
+                <div class="player">Alice: <span class="score correct">$${gameState.scores.Alice}</span></div>
+                <div class="player">Bob: <span class="score correct">$${gameState.scores.Bob}</span></div>
+                <div class="player">Charlie: <span class="score incorrect">$${gameState.scores.Charlie}</span></div>
+                <div class="player">Diana: <span class="score incorrect">$${gameState.scores.Diana}</span></div>
+            `;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function stopTest() {
+            testRunning = false;
+            connections.forEach(ws => ws && ws.close());
+            connections = [];
+            playerWs = [];
+            hostWs = null;
+            updateStatus('Test stopped');
+            log('Test stopped by user');
+        }
+
+        function createWebSocket() {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            return new WebSocket(wsUrl);
+        }
+
+        async function startTest() {
+            if (testRunning) {
+                log('Test already running!');
+                return;
+            }
+            
+            testRunning = true;
+            log('Starting comprehensive E2E test...');
+            updateStatus('Connecting as host...');
+
+            try {
+                // Step 1: Connect as host
+                await connectAsHost();
+                await sleep(1000);
+
+                // Step 2: Add 4 players
+                await addPlayers();
+                await sleep(2000);
+
+                // Step 3: Play through multiple questions
+                await playQuestions();
+
+                log('✅ E2E Test completed successfully!');
+                updateStatus('Test completed - Check results above');
+
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`);
+                updateStatus(`Test failed: ${error.message}`);
+            }
+        }
+
+        function connectAsHost() {
+            return new Promise((resolve, reject) => {
+                log('Connecting as host with code REPLIT...');
+                hostWs = createWebSocket();
+                connections.push(hostWs);
+
+                hostWs.onopen = () => {
+                    log('Host WebSocket connected');
+                    // Join existing REPL game as host
+                    hostWs.send(JSON.stringify({
+                        type: 'join_game',
+                        data: {
+                            roomCode: 'REPL',
+                            hostCode: 'REPLIT',
+                            isHost: true
+                        }
+                    }));
+                };
+
+                hostWs.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    log(`Host received: ${message.type}`);
+                    
+                    if (message.type === 'game_joined') {
+                        gameState.gameId = message.data.gameId;
+                        log(`✅ Joined as host - Game ID: ${gameState.gameId}`);
+                        resolve();
+                    } else if (message.type === 'host_joined') {
+                        log('Host status confirmed');
+                    } else if (message.type === 'player_joined') {
+                        log(`Player joined: ${message.data.player.name}`);
+                        gameState.players.push(message.data.player);
+                    } else if (message.type === 'answer_marked') {
+                        const playerName = message.data.playerName;
+                        gameState.scores[playerName] = message.data.newScore;
+                        updateScores();
+                        log(`Score updated: ${playerName} = $${message.data.newScore} (${message.data.isCorrect ? '+' : ''}${message.data.pointsAwarded})`);
+                    }
+                };
+
+                hostWs.onerror = (error) => {
+                    log(`Host WebSocket error: ${error}`);
+                    reject(error);
+                };
+
+                setTimeout(() => reject(new Error('Host connection timeout')), 10000);
+            });
+        }
+
+        async function addPlayers() {
+            const playerNames = ['Alice', 'Bob', 'Charlie', 'Diana'];
+            log(`Adding ${playerNames.length} players...`);
+            
+            for (let i = 0; i < playerNames.length; i++) {
+                await addPlayer(playerNames[i]);
+                await sleep(500);
+            }
+        }
+
+        function addPlayer(playerName) {
+            return new Promise((resolve, reject) => {
+                log(`Adding player: ${playerName}`);
+                const playerWs = createWebSocket();
+                playerWs.index = playerWs.length;
+                playerWs.playerName = playerName;
+                connections.push(playerWs);
+
+                playerWs.onopen = () => {
+                    playerWs.send(JSON.stringify({
+                        type: 'join_game',
+                        data: {
+                            roomCode: 'REPL',
+                            playerName: playerName,
+                            isHost: false
+                        }
+                    }));
+                };
+
+                playerWs.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'game_joined') {
+                        log(`✅ ${playerName} joined successfully`);
+                        resolve();
+                    } else if (message.type === 'question_selected') {
+                        // Auto-submit answer for this player
+                        setTimeout(() => {
+                            const answer = (playerName === 'Alice' || playerName === 'Bob') 
+                                ? 'Correct Answer' 
+                                : 'Wrong Answer';
+                            
+                            playerWs.send(JSON.stringify({
+                                type: 'submit_answer',
+                                data: {
+                                    answer: answer,
+                                    questionId: message.data.question.id
+                                }
+                            }));
+                            log(`${playerName} submitted: "${answer}"`);
+                        }, Math.random() * 5000 + 1000); // Random delay 1-6 seconds
+                    }
+                };
+
+                playerWs.onerror = (error) => {
+                    log(`${playerName} WebSocket error: ${error}`);
+                    reject(error);
+                };
+
+                setTimeout(() => reject(new Error(`${playerName} connection timeout`)), 5000);
+            });
+        }
+
+        async function playQuestions() {
+            log('Starting question gameplay...');
+            updateStatus('Playing questions - Testing scoring system...');
+            
+            const categories = ['HISTORY', 'SCIENCE', 'SPORTS', 'MOVIES', 'GEOGRAPHY', 'LITERATURE'];
+            const values = [100, 200, 300, 400, 500];
+            
+            // Play 10 questions to test scoring thoroughly
+            for (let i = 0; i < 10; i++) {
+                const category = categories[i % categories.length];
+                const value = values[i % values.length];
+                
+                log(`\n--- Question ${i + 1}: ${category} - $${value} ---`);
+                await playQuestion(category, value);
+                await sleep(3000); // Wait between questions
+                
+                if (!testRunning) break;
+            }
+            
+            // Final score verification
+            log('\n=== FINAL SCORE VERIFICATION ===');
+            log(`Alice (should be positive): $${gameState.scores.Alice}`);
+            log(`Bob (should be positive): $${gameState.scores.Bob}`);
+            log(`Charlie (should be negative): $${gameState.scores.Charlie}`);
+            log(`Diana (should be negative): $${gameState.scores.Diana}`);
+            
+            const alicePositive = gameState.scores.Alice > 0;
+            const bobPositive = gameState.scores.Bob > 0;
+            const charlieNegative = gameState.scores.Charlie < 0;
+            const dianaNegative = gameState.scores.Diana < 0;
+            
+            log(`✅ Scoring Test Results:`);
+            log(`Alice positive: ${alicePositive ? 'PASS' : 'FAIL'}`);
+            log(`Bob positive: ${bobPositive ? 'PASS' : 'FAIL'}`);
+            log(`Charlie negative: ${charlieNegative ? 'PASS' : 'FAIL'}`);
+            log(`Diana negative: ${dianaNegative ? 'PASS' : 'FAIL'}`);
+        }
+
+        function playQuestion(category, value) {
+            return new Promise((resolve) => {
+                log(`Host selecting: ${category} - $${value}`);
+                
+                hostWs.send(JSON.stringify({
+                    type: 'select_question',
+                    data: {
+                        category: category,
+                        value: value
+                    }
+                }));
+
+                // Wait for answers to be submitted, then mark them
+                setTimeout(() => {
+                    // Mark Alice and Bob as correct (they should gain points)
+                    markPlayerAnswer('Alice', true, value);
+                    markPlayerAnswer('Bob', true, value);
+                    
+                    // Mark Charlie and Diana as incorrect (they should lose points)  
+                    markPlayerAnswer('Charlie', false, value);
+                    markPlayerAnswer('Diana', false, value);
+                    
+                    resolve();
+                }, 8000); // Wait 8 seconds for submissions
+            });
+        }
+
+        function markPlayerAnswer(playerName, isCorrect, value) {
+            // Find the player ID
+            const player = gameState.players.find(p => p.name === playerName);
+            if (!player) {
+                log(`❌ Could not find player: ${playerName}`);
+                return;
+            }
+
+            setTimeout(() => {
+                hostWs.send(JSON.stringify({
+                    type: 'mark_answer',
+                    data: {
+                        playerId: player.id,
+                        isCorrect: isCorrect,
+                        pointsAwarded: isCorrect ? value : -value
+                    }
+                }));
+                log(`Host marked ${playerName}: ${isCorrect ? 'CORRECT' : 'INCORRECT'} (${isCorrect ? '+' : '-'}$${value})`);
+            }, Math.random() * 2000 + 500); // Random delay 500ms-2.5s
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Initialize
+        updateScores();
+        log('E2E Test interface loaded. Ready to test REPLIT game.');
+    </script>
+</body>
+</html>
