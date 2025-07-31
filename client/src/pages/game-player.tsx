@@ -92,7 +92,9 @@ export default function GamePlayer() {
     if (data.player.id !== playerState.playerId) {
       setPlayerState(prev => ({
         ...prev,
-        otherPlayers: [...prev.otherPlayers, data.player]
+        otherPlayers: prev.otherPlayers.some(p => p.id === data.player.id)
+          ? prev.otherPlayers.map(p => p.id === data.player.id ? data.player : p)
+          : [...prev.otherPlayers, data.player]
       }));
     }
   });

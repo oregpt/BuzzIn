@@ -231,12 +231,18 @@ export default function GameHost() {
   onMessage("player_joined", (data) => {
     setGameState(prev => ({
       ...prev,
-      players: [...prev.players, data.player]
+      players: prev.players.some(p => p.id === data.player.id)
+        ? prev.players.map(p => p.id === data.player.id ? data.player : p)
+        : [...prev.players, data.player]
     }));
-    toast({
-      title: "Player Joined",
-      description: `${data.player.name} joined the game`,
-    });
+    
+    // Only show toast for genuinely new players
+    if (!gameState.players.some(p => p.id === data.player.id)) {
+      toast({
+        title: "Player Joined",
+        description: `${data.player.name} joined the game`,
+      });
+    }
   });
 
   onMessage("question_selected", (data) => {
