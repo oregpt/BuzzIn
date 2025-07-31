@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Question Recovery for Bu's Bday Jeopardy</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .category { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .category h3 { color: #2563eb; margin-top: 0; }
+        .question-row { display: grid; grid-template-columns: 80px 1fr 200px 100px; gap: 10px; margin: 5px 0; align-items: center; }
+        .value { font-weight: bold; color: #059669; }
+        input[type="text"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; }
+        textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; height: 60px; resize: vertical; }
+        button { background: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #1d4ed8; }
+        .export-area { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 8px; }
+        #sqlOutput { width: 100%; height: 200px; font-family: monospace; font-size: 12px; }
+        .instructions { background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Quick Question Recovery Tool</h1>
+    <div class="instructions">
+        <strong>Instructions:</strong> Fill in your questions below, click "Generate SQL", copy the SQL code, and paste it into the game's database to restore all your custom questions at once.
+    </div>
+
+    <div id="categories"></div>
+    
+    <div class="export-area">
+        <button onclick="generateSQL()">Generate SQL to Restore Questions</button>
+        <br><br>
+        <textarea id="sqlOutput" placeholder="Generated SQL will appear here..."></textarea>
+        <br>
+        <small>Copy this SQL and run it in your database to restore all questions</small>
+    </div>
+
+    <script>
+        const categories = ["SCHOOLING", "FAVORITES", "THIS OR THAT", "PLACES", "FAMILY THINGS", "EARLY YEARS"];
+        const values = [100, 200, 300, 400, 500];
+        
+        function createForm() {
+            const container = document.getElementById('categories');
+            
+            categories.forEach(category => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'category';
+                categoryDiv.innerHTML = `
+                    <h3>${category}</h3>
+                    ${values.map(value => `
+                        <div class="question-row">
+                            <div class="value">$${value}</div>
+                            <textarea placeholder="Enter question..." data-category="${category}" data-value="${value}" data-field="question"></textarea>
+                            <input type="text" placeholder="Correct answer" data-category="${category}" data-value="${value}" data-field="answer">
+                            <select data-category="${category}" data-value="${value}" data-field="type">
+                                <option value="specific_answer">Specific Answer</option>
+                                <option value="true_false">True/False</option>
+                                <option value="multiple_choice">Multiple Choice</option>
+                            </select>
+                        </div>
+                    `).join('')}
+                `;
+                container.appendChild(categoryDiv);
+            });
+        }
+        
+        function generateSQL() {
+            const gameId = 'ecf96220-5353-4cd0-8a8d-d5d323cde355'; // Your game ID
+            let sql = `-- Delete existing questions for your categories\nDELETE FROM questions WHERE game_id = '${gameId}';\n\n-- Insert your custom questions\n`;
+            
+            categories.forEach(category => {
+                values.forEach(value => {
+                    const question = document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="question"]`).value;
+                    const answer = document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="answer"]`).value;
+                    const type = document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="type"]`).value;
+                    
+                    if (question.trim() && answer.trim()) {
+                        sql += `INSERT INTO questions (id, game_id, category, value, question, type, correct_answer, options, is_used) VALUES\n`;
+                        sql += `(gen_random_uuid(), '${gameId}', '${category}', ${value}, '${question.replace(/'/g, "''")}', '${type}', '${answer.replace(/'/g, "''")}', null, false);\n\n`;
+                    }
+                });
+            });
+            
+            document.getElementById('sqlOutput').value = sql;
+        }
+        
+        // Auto-save to localStorage
+        function autoSave() {
+            const data = {};
+            categories.forEach(category => {
+                data[category] = {};
+                values.forEach(value => {
+                    data[category][value] = {
+                        question: document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="question"]`).value,
+                        answer: document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="answer"]`).value,
+                        type: document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="type"]`).value
+                    };
+                });
+            });
+            localStorage.setItem('questionRecovery', JSON.stringify(data));
+        }
+        
+        function loadSaved() {
+            const saved = localStorage.getItem('questionRecovery');
+            if (saved) {
+                const data = JSON.parse(saved);
+                categories.forEach(category => {
+                    if (data[category]) {
+                        values.forEach(value => {
+                            if (data[category][value]) {
+                                const item = data[category][value];
+                                document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="question"]`).value = item.question || '';
+                                document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="answer"]`).value = item.answer || '';
+                                document.querySelector(`[data-category="${category}"][data-value="${value}"][data-field="type"]`).value = item.type || 'specific_answer';
+                            }
+                        });
+                    }
+                });
+            }
+        }
+        
+        createForm();
+        setTimeout(loadSaved, 100);
+        
+        // Auto-save every 30 seconds
+        setInterval(autoSave, 30000);
+        
+        // Save on input
+        document.addEventListener('input', () => {
+            setTimeout(autoSave, 1000);
+        });
+    </script>
+</body>
+</html>
