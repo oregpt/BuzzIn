@@ -254,7 +254,7 @@ export default function GameHost() {
         buzzerResults: [],
         submittedAnswers: [],
         selectedBy: data.selectedBy || null,
-        timeRemaining: 15,
+        timeRemaining: 30,
         questionStartTime: Date.now(),
         // Don't automatically mark as used - only when explicitly marked
       }));

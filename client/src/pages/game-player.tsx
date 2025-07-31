@@ -107,7 +107,7 @@ export default function GamePlayer() {
       gameStatus: "Question active - Submit your answer!",
       hasSubmitted: false,
       answer: "",
-      timeRemaining: 15,
+      timeRemaining: 30,
       questionStartTime: startTime,
       showResults: false,
       submittedAnswers: [],
@@ -316,7 +316,7 @@ export default function GamePlayer() {
                   className={`h-2 rounded-full transition-all duration-100 ${
                     playerState.timeRemaining <= 5 ? 'bg-red-500' : 'bg-green-500'
                   }`}
-                  style={{ width: `${(playerState.timeRemaining / 15) * 100}%` }}
+                  style={{ width: `${(playerState.timeRemaining / 30) * 100}%` }}
                 />
               </div>
             </CardContent>
