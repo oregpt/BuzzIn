@@ -390,7 +390,7 @@ export default function GameHost() {
     });
   };
 
-  const handleMarkAnswer = (playerId: string, isCorrect: boolean, acceptClose = false) => {
+  const handleMarkAnswer = (playerId: string, isCorrect: boolean | null) => {
     if (!gameState.gameId) {
       toast({
         title: "Error",
@@ -404,8 +404,7 @@ export default function GameHost() {
       type: "mark_answer",
       data: { 
         playerId, 
-        isCorrect, 
-        acceptClose 
+        isCorrect 
       }
     });
   };

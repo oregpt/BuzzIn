@@ -241,6 +241,13 @@ export default function GamePlayer() {
     const submissionTime = (Date.now() - playerState.questionStartTime) / 1000;
     const answerText = playerState.answer.trim() || "(No answer)";
 
+    // Immediately mark as submitted to prevent duplicate submissions
+    setPlayerState(prev => ({
+      ...prev,
+      hasSubmitted: true,
+      gameStatus: "Answer submitted! Waiting for host..."
+    }));
+
     sendMessage({
       type: "submit_answer",
       data: {

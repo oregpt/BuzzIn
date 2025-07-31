@@ -401,18 +401,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const player = await storage.getPlayer(ws.playerId);
             if (!player) break;
 
-            // Get current answers for this question to determine submission order
+            // Check if this player has already submitted an answer for this question
             const existingAnswers = await storage.getAnswersByQuestion(questionId);
+            const playerHasAnswered = existingAnswers.some(a => a.playerId === ws.playerId);
+            
+            if (playerHasAnswered) {
+              // Player already submitted, ignore duplicate
+              console.log(`Player ${player.name} tried to submit duplicate answer - ignoring`);
+              break;
+            }
+
+            // Get submission order
             const submissionOrder = existingAnswers.length + 1;
 
-            // Store the submitted answer
+            // Store the submitted answer (no auto-evaluation, host will decide)
             await storage.createGameAnswer({
               gameId: ws.gameId,
               playerId: ws.playerId,
               questionId,
               answer,
-              isCorrect: null, // Will be set when host marks it
-              pointsAwarded: 0,
+              isCorrect: null, // Host will mark as correct/incorrect/neutral
+              pointsAwarded: 0, // Host will set points
               submissionOrder,
               submissionTime,
             });
@@ -432,98 +441,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Check if all players have submitted answers
             const allPlayers = await storage.getPlayersByGameId(ws.gameId);
             const nonHostPlayers = allPlayers.filter(p => !p.isHost);
-            const allAnswers = await storage.getAnswersByQuestion(questionId);
+            const allAnswersNow = await storage.getAnswersByQuestion(questionId);
             
-            if (allAnswers.length >= nonHostPlayers.length) {
-              // All players have submitted - evaluate answers automatically
-              const question = await storage.getQuestion(questionId);
-              if (!question) break;
-
-              // Process answers and auto-evaluate
-              const answersWithEvaluation = await Promise.all(
-                allAnswers.map(async (answer) => {
+            if (allAnswersNow.length >= nonHostPlayers.length) {
+              // All players have submitted - send to host for evaluation
+              const answersForHost = await Promise.all(
+                allAnswersNow.map(async (answer) => {
                   const answerPlayer = await storage.getPlayer(answer.playerId);
-                  
-                  // Auto-evaluate answer
-                  let isCorrect = false;
-                  let pointsAwarded = 0;
-
-                  if (question.type === 'multiple_choice') {
-                    isCorrect = answer.answer.toLowerCase() === question.correctAnswer.toLowerCase();
-                  } else if (question.type === 'true_false') {
-                    isCorrect = answer.answer.toLowerCase() === question.correctAnswer.toLowerCase();
-                  } else {
-                    // For specific answers, use lenient matching
-                    const userAnswer = answer.answer.toLowerCase().trim();
-                    const correctAnswer = question.correctAnswer.toLowerCase().trim();
-                    isCorrect = userAnswer === correctAnswer || 
-                                userAnswer.includes(correctAnswer) || 
-                                correctAnswer.includes(userAnswer);
-                  }
-
-                  // Award points: fastest correct gets full points, incorrect loses points
-                  if (isCorrect && answer.submissionOrder === 1) {
-                    pointsAwarded = question.value;
-                  } else if (!isCorrect) {
-                    pointsAwarded = -question.value;
-                  }
-
-                  // Update answer in database
-                  await db.update(gameAnswers)
-                    .set({ isCorrect, pointsAwarded })
-                    .where(eq(gameAnswers.id, answer.id));
-
-                  // Update player score
-                  if (pointsAwarded !== 0) {
-                    const currentPlayer = await storage.getPlayer(answer.playerId);
-                    if (currentPlayer) {
-                      const newScore = currentPlayer.score + pointsAwarded;
-                      await storage.updatePlayer(answer.playerId, { score: newScore });
-                    }
-                  }
-
                   return {
                     playerId: answer.playerId,
-                    playerName: answerPlayer?.name || 'Unknown',
+                    playerName: answerPlayer!.name,
                     answer: answer.answer,
-                    submissionOrder: answer.submissionOrder || 0,
-                    submissionTime: answer.submissionTime || 0,
-                    isCorrect,
-                    pointsAwarded
+                    submissionOrder: answer.submissionOrder,
+                    submissionTime: answer.submissionTime,
+                    isCorrect: null, // Host will decide
+                    pointsAwarded: 0  // Host will decide
                   };
                 })
               );
 
-              // Sort by submission order
-              answersWithEvaluation.sort((a, b) => a.submissionOrder - b.submissionOrder);
-
+              // Send all answers to host for review
               broadcastToGame(ws.gameId, {
                 type: "all_answers_collected",
-                data: { answers: answersWithEvaluation }
+                data: { answers: answersForHost }
               });
-
-              // Broadcast individual score updates
-              for (const answer of answersWithEvaluation) {
-                if (answer.pointsAwarded !== 0) {
-                  const updatedPlayer = await storage.getPlayer(answer.playerId);
-                  broadcastToGame(ws.gameId, {
-                    type: "answer_marked",
-                    data: {
-                      playerId: answer.playerId,
-                      isCorrect: answer.isCorrect,
-                      pointsAwarded: answer.pointsAwarded,
-                      newScore: updatedPlayer?.score || 0,
-                      canPickNext: answer.isCorrect && answer.submissionOrder === 1
-                    }
-                  });
-                }
-              }
             }
             break;
           }
 
           case 'mark_answer': {
-            const { playerId, isCorrect, acceptClose } = message.data;
+            const { playerId, isCorrect } = message.data;
             console.log('Processing mark_answer:', { playerId, isCorrect, gameId: ws.gameId });
             if (!ws.gameId) {
               console.log('No gameId found for mark_answer');
@@ -536,14 +483,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             if (!game || !player || !question) break;
 
-            const pointsAwarded = isCorrect || acceptClose ? question.value : -question.value;
-            const newScore = player.score + pointsAwarded;
-            const wasCorrect = isCorrect || !!acceptClose;
+            // Host decides: checkmark = correct (+points), X = wrong (-points), no click = neutral (0 points)
+            let pointsAwarded = 0;
+            if (isCorrect === true) {
+              pointsAwarded = question.value; // Checkmark clicked = correct
+            } else if (isCorrect === false) {
+              pointsAwarded = -question.value; // X clicked = wrong
+            }
+            // If isCorrect is null/undefined = no click = neutral (0 points)
 
+            const newScore = player.score + pointsAwarded;
             await storage.updatePlayer(playerId, { score: newScore });
 
-            // If answer was correct, this player gets to pick next
-            if (wasCorrect) {
+            // If answer was marked correct, this player gets to pick next
+            if (isCorrect === true) {
               await storage.updateGame(ws.gameId, { lastCorrectPlayerId: playerId });
             }
 
@@ -551,10 +504,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "answer_marked",
               data: {
                 playerId,
-                isCorrect: wasCorrect,
+                isCorrect: isCorrect === true,
                 pointsAwarded,
                 newScore,
-                canPickNext: wasCorrect
+                canPickNext: isCorrect === true
               }
             });
             break;
