@@ -16,6 +16,7 @@ export interface IStorage {
   createPlayer(player: InsertPlayer): Promise<Player>;
   getPlayer(id: string): Promise<Player | undefined>;
   getPlayersByGameId(gameId: string): Promise<Player[]>;
+  getPlayerByCode(playerCode: string, gameId: string): Promise<Player | undefined>;
   updatePlayer(id: string, updates: Partial<Player>): Promise<Player | undefined>;
   deletePlayer(id: string): Promise<boolean>;
 
@@ -196,6 +197,8 @@ export class MemStorage implements IStorage {
       score: insertPlayer.score || 0,
       isHost: insertPlayer.isHost || false,
       socketId: insertPlayer.socketId || null,
+      playerCode: insertPlayer.playerCode || null,
+      isConnected: insertPlayer.isConnected ?? true,
       joinedAt: new Date(),
     };
     this.players.set(id, player);
@@ -217,6 +220,12 @@ export class MemStorage implements IStorage {
     const updatedPlayer = { ...player, ...updates };
     this.players.set(id, updatedPlayer);
     return updatedPlayer;
+  }
+
+  async getPlayerByCode(playerCode: string, gameId: string): Promise<Player | undefined> {
+    return Array.from(this.players.values()).find(
+      player => player.playerCode === playerCode && player.gameId === gameId
+    );
   }
 
   async deletePlayer(id: string): Promise<boolean> {
@@ -387,6 +396,13 @@ export class DatabaseStorage implements IStorage {
   async deletePlayer(id: string): Promise<boolean> {
     const result = await db.delete(players).where(eq(players.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getPlayerByCode(playerCode: string, gameId: string): Promise<Player | undefined> {
+    const [player] = await db.select().from(players).where(
+      and(eq(players.playerCode, playerCode), eq(players.gameId, gameId))
+    );
+    return player || undefined;
   }
 
   // Question methods

@@ -30,6 +30,8 @@ export const players = pgTable("players", {
   score: integer("score").notNull().default(0),
   isHost: boolean("is_host").notNull().default(false),
   socketId: text("socket_id"),
+  playerCode: varchar("player_code", { length: 6 }), // Unique code for player to rejoin
+  isConnected: boolean("is_connected").notNull().default(true),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 
@@ -111,9 +113,12 @@ export type GameAnswer = typeof gameAnswers.$inferSelect;
 
 // WebSocket message types
 export type WSMessage = 
-  | { type: "join_game"; data: { roomCode: string; playerName: string } }
+  | { type: "join_game"; data: { roomCode: string; playerName?: string; playerCode?: string; isHost?: boolean; hostCode?: string; hostName?: string } }
   | { type: "join_as_host"; data: { roomCode: string; hostCode: string } }
   | { type: "create_game"; data: { gameName: string; hostName: string; categories?: string[]; gameSetup?: string } }
+  | { type: "create_player"; data: { playerName: string } }
+  | { type: "reconnect_player"; data: { roomCode: string; playerCode: string } }
+  | { type: "reset_game"; data: {} }
   | { type: "get_game_state"; data: { gameId: string } }
   | { type: "select_question"; data: { category: string; value: number; selectedBy?: string } }
   | { type: "buzz"; data: { questionId: string } }
@@ -126,7 +131,11 @@ export type WSMessage =
 
 export type WSResponse = 
   | { type: "game_created"; data: { roomCode: string; gameId: string; hostCode: string } }
-  | { type: "game_joined"; data: { playerId: string; gameId: string; players: Player[]; roomCode?: string } }
+  | { type: "game_joined"; data: { playerId: string; gameId: string; players: Player[]; roomCode?: string; categories?: string[]; questions?: Question[] } }
+  | { type: "player_created"; data: { player: Player; playerCode: string } }
+  | { type: "player_reconnected"; data: { player: Player } }
+  | { type: "game_reset"; data: { players: Player[]; questions: Question[] } }
+  | { type: "reset_success"; data: { message: string } }
   | { type: "game_state_loaded"; data: { questions: Question[]; game: Game; categories: string[] } }
   | { type: "player_joined"; data: { player: Player } }
   | { type: "host_joined"; data: { player: Player } }

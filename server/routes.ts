@@ -153,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           case 'join_game': {
-            const { roomCode, playerName, isHost, hostCode, hostName } = message.data;
+            const { roomCode, playerName, isHost, hostCode, hostName, playerCode } = message.data;
             
             // If this is a host joining, redirect to host logic
             if (isHost) {
@@ -233,13 +233,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
             }
 
-            const player = await storage.createPlayer({
+            let player: Player;
+
+            // Check if this is a reconnection with player code
+            if (playerCode) {
+              const existingPlayer = await storage.getPlayerByCode(playerCode, game.id);
+              if (existingPlayer) {
+                // Reconnect existing player
+                player = await storage.updatePlayer(existingPlayer.id, {
+                  isConnected: true,
+                  socketId: null
+                }) || existingPlayer;
+                
+                ws.playerId = player.id;
+                ws.gameId = game.id;
+                connections.set(player.id, ws);
+                
+                if (!gameConnections.has(game.id)) {
+                  gameConnections.set(game.id, new Set());
+                }
+                gameConnections.get(game.id)!.add(player.id);
+
+                const allPlayers = await storage.getPlayersByGameId(game.id);
+
+                ws.send(JSON.stringify({
+                  type: "player_reconnected",
+                  data: { player }
+                }));
+
+                const joinResponse: WSResponse = {
+                  type: "game_joined",
+                  data: { playerId: player.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode }
+                };
+                console.log('Sending game_joined response to reconnected player:', player.id);
+                ws.send(JSON.stringify(joinResponse));
+
+                broadcastToGame(game.id, {
+                  type: "player_joined",
+                  data: { player }
+                });
+                break;
+              } else {
+                ws.send(JSON.stringify({
+                  type: "error",
+                  data: { message: "Invalid player code" }
+                }));
+                break;
+              }
+            }
+
+            // Create new player (either first-time join or no player code provided)
+            if (!playerName) {
+              ws.send(JSON.stringify({
+                type: "error", 
+                data: { message: "Player name required for new players" }
+              }));
+              break;
+            }
+
+            player = await storage.createPlayer({
               gameId: game.id,
               name: playerName,
               score: 0,
               isHost: false,
               socketId: null,
+              playerCode: storage.generateAuthCode(), // Generate unique player code
+              isConnected: true,
             });
+
+            ws.playerId = player.id;
+            ws.gameId = game.id;
+            connections.set(player.id, ws);
+            
+            if (!gameConnections.has(game.id)) {
+              gameConnections.set(game.id, new Set());
+            }
+            gameConnections.get(game.id)!.add(player.id);
+
+            const allPlayers = await storage.getPlayersByGameId(game.id);
+
+            const joinResponse: WSResponse = {
+              type: "game_joined",
+              data: { playerId: player.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode }
+            };
+            console.log('Sending game_joined response to player:', player.id);
+            ws.send(JSON.stringify(joinResponse));
+
+            broadcastToGame(game.id, {
+              type: "player_joined",
+              data: { player }
+            });
+            break;
+          }
+
+          case 'create_player': {
+            if (!ws.gameId) {
+              ws.send(JSON.stringify({
+                type: "error",
+                data: { message: "Host must be in a game to create players" }
+              }));
+              break;
+            }
+
+            const { playerName } = message.data;
+            const playerCode = storage.generateAuthCode();
+
+            const player = await storage.createPlayer({
+              gameId: ws.gameId,
+              name: playerName,
+              score: 0,
+              isHost: false,
+              socketId: null,
+              playerCode,
+              isConnected: false, // Not connected until they join
+            });
+
+            ws.send(JSON.stringify({
+              type: "player_created",
+              data: { player, playerCode }
+            }));
+
+            // Broadcast to all players that a new player slot was created
+            broadcastToGame(ws.gameId, {
+              type: "player_joined",
+              data: { player }
+            });
+            break;
+          }
 
             ws.playerId = player.id;
             ws.gameId = game.id;

@@ -397,7 +397,7 @@ export default function GameHost() {
 
     const interval = setInterval(() => {
       const elapsed = (Date.now() - gameState.questionStartTime!) / 1000;
-      const remaining = Math.max(0, 15 - elapsed);
+      const remaining = Math.max(0, 30 - elapsed);
       
       setGameState(prev => ({
         ...prev,
