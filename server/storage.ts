@@ -3,6 +3,14 @@ import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, or } from "drizzle-orm";
 
+const CELEBRATION_WORDS = [
+  'HAPPY', 'BIRTHDAY', 'CELEBRATE', 'PARTY', 'FESTIVE', 'JOYFUL',
+  'CHEER', 'SMILE', 'LAUGH', 'DANCE', 'MUSIC', 'CAKE', 'CANDLE',
+  'WISH', 'GIFT', 'SURPRISE', 'FUN', 'BRIGHT', 'SPARKLE', 'SHINE',
+  'LOVE', 'FRIENDS', 'FAMILY', 'MEMORY', 'SPECIAL', 'MAGIC',
+  'WONDER', 'DREAM', 'HOPE', 'PEACE'
+];
+
 export interface IStorage {
   // Game methods
   createGame(game: InsertGame): Promise<Game>;
@@ -52,6 +60,7 @@ export class MemStorage implements IStorage {
   private questions: Map<string, Question>;
   private buzzes: Map<string, Buzz>;
   private gameAnswers: Map<string, GameAnswer>;
+  private usedWords: Set<string> = new Set();
 
   constructor() {
     this.games = new Map();
@@ -136,13 +145,20 @@ export class MemStorage implements IStorage {
   }
 
   generateAuthCode(): string {
-    // Generate 6-character alphanumeric code
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    // Generate memorable word from celebration words list
+    // If all words used, reset and reuse
+    if (this.usedWords.size >= CELEBRATION_WORDS.length) {
+      this.usedWords.clear();
     }
-    return code;
+    
+    // Find an unused word
+    let word: string;
+    do {
+      word = CELEBRATION_WORDS[Math.floor(Math.random() * CELEBRATION_WORDS.length)];
+    } while (this.usedWords.has(word));
+    
+    this.usedWords.add(word);
+    return word;
   }
 
   async createGame(insertGame: InsertGame): Promise<Game> {
@@ -344,6 +360,7 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private usedWords: Set<string> = new Set();
   // Game methods
   async createGame(insertGame: InsertGame): Promise<Game> {
     const [game] = await db.insert(games).values(insertGame).returning();
@@ -637,8 +654,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   generateAuthCode(): string {
-    // Generate a 6-character authentication code
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Generate memorable word from celebration words list
+    // If all words used, reset and reuse
+    if (this.usedWords.size >= CELEBRATION_WORDS.length) {
+      this.usedWords.clear();
+    }
+    
+    // Find an unused word
+    let word: string;
+    do {
+      word = CELEBRATION_WORDS[Math.floor(Math.random() * CELEBRATION_WORDS.length)];
+    } while (this.usedWords.has(word));
+    
+    this.usedWords.add(word);
+    return word;
   }
 
   async resetGame(gameId: string): Promise<boolean> {

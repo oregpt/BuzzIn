@@ -126,6 +126,12 @@ The application is structured for easy development with hot reloading and clear 
 - Authentication dialog handles both host and player joining with appropriate code fields
 - Name input only appears for player role in join dialog
 
+### Word-Based Player Authentication (August 1, 2025)
+- **Memorable Player Codes**: Replaced random letter codes with celebration-themed words (HAPPY, BIRTHDAY, CELEBRATE, etc.)
+- **30-Word Cycling System**: Uses predefined list of 30 memorable words that recycle when exhausted
+- **Easy Player Access**: Makes joining games much simpler with recognizable words instead of random characters
+- **Celebration Theme**: Words chosen to match birthday/party context with positive, memorable terms
+
 ### Enhanced Buzz Order Tracking
 - Complete buzz order tracking (1st, 2nd, 3rd, etc.) for all players
 - Real-time buzz order display on both host and player interfaces
