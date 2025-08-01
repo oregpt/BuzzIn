@@ -17,15 +17,15 @@ export default function GameHost() {
   const [showQuestion, setShowQuestion] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
 
-  // Initialize from game setup or URL params
+  // Initialize from game setup or host join
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomCodeParam = urlParams.get('roomCode');
-    const gameIdParam = urlParams.get('gameId');
-    
-    // Check if joining existing game as host
-    if (roomCodeParam && gameIdParam) {
-      refreshGameState(gameIdParam);
+    // Check if joining existing game as host (from lobby)
+    const hostGameState = localStorage.getItem('hostGameState');
+    if (hostGameState) {
+      const hostData = JSON.parse(hostGameState);
+      console.log('Loading host game state:', hostData);
+      refreshGameState(hostData.gameId);
+      localStorage.removeItem('hostGameState'); // Clean up after use
       return;
     }
     

@@ -159,7 +159,13 @@ export default function GameLobby() {
     const isHost = data.players?.find((p: any) => p.id === data.playerId)?.isHost;
     console.log('Player isHost:', isHost, 'Navigating to:', isHost ? '/host' : '/play');
     if (isHost) {
-      navigate(`/host?game=${data.gameId}&player=${data.playerId}&room=${data.roomCode || selectedGame?.roomCode || ''}`);
+      // Store game state in localStorage for host page to access
+      localStorage.setItem('hostGameState', JSON.stringify({
+        gameId: data.gameId,
+        playerId: data.playerId,
+        roomCode: data.roomCode || selectedGame?.roomCode || ''
+      }));
+      navigate('/host');
     } else {
       // Get room code from server response
       const roomCode = data.roomCode || selectedGame?.roomCode || '';
