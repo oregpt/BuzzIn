@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
 import { Trophy, Users, Pause, Square, Check, X, Star, ArrowLeft, RotateCcw, Edit } from "lucide-react";
 import PlayerManagement from "./player-management";
 import { useToast } from "@/hooks/use-toast";
+import { useGameState } from "@/hooks/use-game-state";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,69 +13,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DEFAULT_CATEGORIES, VALUES, formatCurrency } from "@/lib/game-data";
 import type { Player, Question } from "@shared/schema";
 
-interface GameState {
-  roomCode: string;
-  gameId: string;
-  categories: string[];
-  players: Player[];
-  currentQuestion: Question | null;
-  buzzerResults: Array<{
-    playerId: string;
-    playerName: string;
-    timestamp: number;
-    isFirst: boolean;
-    buzzOrder: number;
-  }>;
-  submittedAnswers: Array<{
-    playerId: string;
-    playerName: string;
-    answer: string;
-    submissionOrder: number;
-    submissionTime: number;
-    isCorrect?: boolean;
-    pointsAwarded?: number;
-  }>;
-  usedQuestions: Set<string>;
-  nextPicker: { playerId: string; playerName: string } | null;
-  selectedBy: string | null;
-  timeRemaining: number;
-  questionStartTime: number | null;
-}
-
 export default function GameHost() {
   const [, navigate] = useLocation();
-  const { sendMessage, onMessage } = useWebSocket();
   const { toast } = useToast();
+  const { gameState, isLoading, error, refreshGameState, sendAction } = useGameState();
 
-  const [gameState, setGameState] = useState<GameState>({
-    roomCode: "",
-    gameId: "",
-    categories: [], // Will be loaded from game data
-    players: [],
-    currentQuestion: null,
-    buzzerResults: [],
-    submittedAnswers: [],
-    usedQuestions: new Set(),
-    nextPicker: null,
-    selectedBy: null,
-    timeRemaining: 0,
-    questionStartTime: null,
-  });
-
+  // UI state for dialogs and modals (not game state)
   const [showQuestion, setShowQuestion] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showScorePopup, setShowScorePopup] = useState(false);
-  const [scoreData, setScoreData] = useState<{
-    beforeScores: { playerId: string; playerName: string; score: number }[];
-    changes: { playerId: string; playerName: string; change: number }[];
-    afterScores: { playerId: string; playerName: string; score: number }[];
-  } | null>(null);
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showScores, setShowScores] = useState(false);
   const [showEditQuestions, setShowEditQuestions] = useState(false);
   const [showPlayerManagement, setShowPlayerManagement] = useState(false);
-  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [editForm, setEditForm] = useState<{
     question: string;
@@ -97,16 +48,11 @@ export default function GameHost() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomCodeParam = urlParams.get('roomCode');
+    const gameIdParam = urlParams.get('gameId');
     
     // Check if joining existing game as host
-    if (roomCodeParam) {
-      setGameState(prev => ({
-        ...prev,
-        roomCode: roomCodeParam,
-      }));
-      
-      // This case should not happen for hosts - they should navigate with proper params
-      navigate('/');
+    if (roomCodeParam && gameIdParam) {
+      refreshGameState(gameIdParam);
       return;
     }
     
@@ -115,14 +61,8 @@ export default function GameHost() {
     if (gameSetup) {
       const setup = JSON.parse(gameSetup);
       
-      // Update local state with custom categories first
-      setGameState(prev => ({
-        ...prev,
-        categories: setup.categories
-      }));
-      
       // Create game with custom categories and questions via WebSocket
-      sendMessage({
+      sendAction({
         type: "create_game",
         data: {
           gameName: setup.gameName,
@@ -146,72 +86,18 @@ export default function GameHost() {
       return;
     }
 
-    setGameState(prev => ({ ...prev, roomCode, gameId }));
-  }, [navigate, sendMessage]);
+  }, [sendAction, refreshGameState, navigate]);
 
-  // WebSocket message handlers
-  onMessage("game_created", (data) => {
-    // Get categories from setup if available
-    const storedCategories = localStorage.getItem('categories');
-    const categories = storedCategories ? JSON.parse(storedCategories) : [];
-    
-    setGameState(prev => ({
-      ...prev,
-      roomCode: data.roomCode,
-      gameId: data.gameId,
-      categories: categories
-    }));
-    
-    // Clean up stored categories
-    localStorage.removeItem('categories');
-    
-    toast({
-      title: "Game Created!",
-      description: `Room: ${data.roomCode} | Host Code: ${data.hostCode}`,
-      duration: 10000, // Show longer so host can note the codes
-    });
-  });
-
-  onMessage("game_joined", (data) => {
-    console.log('Host received game_joined:', data);
-    // When host joins an existing game, set the initial state
-    setGameState(prev => {
-      const newState = {
-        ...prev,
-        roomCode: data.roomCode || prev.roomCode,
-        gameId: data.gameId,
-        categories: data.categories || prev.categories, // Use game's actual categories
-        players: data.players || []
-      };
-      console.log('Setting host gameState:', newState);
-      return newState;
-    });
-    
-    // Request game questions and state for existing game
-    sendMessage({
-      type: "get_game_state",
-      data: { gameId: data.gameId }
-    });
-    
-    toast({
-      title: "Joined as Host",
-      description: `Room: ${data.roomCode}`,
-    });
-  });
-
-  // Add handler for joining as host specifically
-  onMessage("host_joined", (data) => {
-    // This message is broadcast to all players when a host joins
-    // The host player data is in data.player
-    if (data.player) {
-      setGameState(prev => ({
-        ...prev,
-        players: prev.players.some(p => p.id === data.player.id) 
-          ? prev.players.map(p => p.id === data.player.id ? data.player : p)
-          : [...prev.players, data.player]
-      }));
+  // Error handling
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive"
+      });
     }
-  });
+  }, [error, toast]);
 
   onMessage("game_state_loaded", (data) => {
     // Load questions and mark used ones when rejoining existing game

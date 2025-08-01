@@ -2,11 +2,12 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { GameStateManager } from "./game-state-manager";
 import { gameAnswers } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
-import type { WSMessage, WSResponse, Player, Game, Question } from "@shared/schema";
+import type { WSMessage, WSResponse, Player, Game, Question, CompleteGameState } from "@shared/schema";
 
 interface ExtendedWebSocket extends WebSocket {
   playerId?: string;
@@ -17,9 +18,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
+  // Initialize game state manager
+  const gameStateManager = new GameStateManager(storage);
+
   // Store WebSocket connections
   const connections = new Map<string, ExtendedWebSocket>();
   const gameConnections = new Map<string, Set<string>>();
+
+  // Broadcast complete game state to all players in a game
+  async function broadcastGameState(gameId: string) {
+    const gameState = await gameStateManager.getCompleteGameState(gameId);
+    if (gameState) {
+      broadcastToGame(gameId, { type: "game_state", data: gameState });
+    }
+  }
 
   // Broadcast to all players in a game
   function broadcastToGame(gameId: string, message: WSResponse) {
@@ -388,11 +400,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { gameId } = message.data;
             if (!gameId) break;
 
-            // Get game questions and used status
-            const questions = await storage.getQuestionsByGameId(gameId);
-            const game = await storage.getGame(gameId);
-            
-            if (!game) {
+            const gameState = await gameStateManager.getCompleteGameState(gameId);
+            if (!gameState) {
               sendToPlayer(ws.playerId || '', {
                 type: "error", 
                 data: { message: "Game not found" }
@@ -401,12 +410,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             sendToPlayer(ws.playerId || '', {
-              type: "game_state_loaded",
-              data: { 
-                questions,
-                game,
-                categories: (game.categories as string[]) || []
-              }
+              type: "game_state",
+              data: gameState
             });
             break;
           }
@@ -415,34 +420,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Host-triggered sync of all players to current game state
             if (!ws.gameId) break;
             
-            const game = await storage.getGame(ws.gameId);
-            const questions = await storage.getQuestionsByGameId(ws.gameId);
-            const allPlayers = await storage.getPlayersByGameId(ws.gameId);
+            await broadcastGameState(ws.gameId);
             
-            if (!game) break;
-
-            // Get current question if one is active
-            let currentQuestion = null;
-            let questionStartTime = null;
-            if (game.currentQuestionId) {
-              currentQuestion = await storage.getQuestion(game.currentQuestionId);
-              // For sync, assume question started recently (players will get remaining time)
-              questionStartTime = Date.now() - 5000; // Give 25 seconds remaining
-            }
-
-            // Broadcast complete sync to all players
-            broadcastToGame(ws.gameId, {
-              type: "full_sync",
-              data: {
-                game,
-                questions,
-                players: allPlayers,
-                currentQuestion,
-                questionStartTime,
-                categories: (game.categories as string[]) || []
-              }
-            });
-
             sendToPlayer(ws.playerId || '', {
               type: "sync_complete",
               data: { message: "All players have been synchronized" }
@@ -499,14 +478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
             }
 
-            const questions = await storage.getQuestionsByGameId(ws.gameId);
-            const question = questions.find(q => 
-              q.category === category && 
-              q.value === value && 
-              !q.isUsed
-            );
-
-            if (!question) {
+            const newState = await gameStateManager.selectQuestion(ws.gameId, category, value, selectedBy);
+            if (!newState) {
               sendToPlayer(ws.playerId || '', {
                 type: "error",
                 data: { message: "Question not found or already used" }
@@ -514,32 +487,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
             }
 
-            // Don't mark as used here - only when explicitly requested
-            await storage.updateGame(ws.gameId, { 
-              currentQuestionId: question.id,
-              status: "active"
-            });
-
-            // Clear any existing buzzes and answers for this question
-            await storage.clearBuzzesForQuestion(question.id);
-            // Clear any existing answers for the new gameplay model
-            const existingAnswers = await storage.getAnswersByQuestion(question.id);
-            for (const answer of existingAnswers) {
-              await db.delete(gameAnswers).where(eq(gameAnswers.id, answer.id));
-            }
-
-            let selectedByName = "Host";
-            if (selectedBy) {
-              const selectorPlayer = await storage.getPlayer(selectedBy);
-              if (selectorPlayer) {
-                selectedByName = selectorPlayer.name;
-              }
-            }
-
-            broadcastToGame(ws.gameId, {
-              type: "question_selected",
-              data: { question, selectedBy: selectedByName }
-            });
+            // Broadcast the complete new game state
+            await broadcastGameState(ws.gameId);
             break;
           }
 
@@ -547,52 +496,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { questionId } = message.data;
             if (!ws.playerId || !ws.gameId) break;
 
-            const player = await storage.getPlayer(ws.playerId);
-            if (!player) break;
+            const newState = await gameStateManager.buzzIn(ws.gameId, ws.playerId, questionId);
+            if (!newState) break;
 
-            const existingBuzzes = await storage.getBuzzesByQuestion(questionId);
-            const isFirst = existingBuzzes.length === 0;
-            const buzzOrder = existingBuzzes.length + 1;
-
-            const buzz = await storage.createBuzz({
-              gameId: ws.gameId,
-              playerId: ws.playerId,
-              questionId,
-              isFirst,
-              buzzOrder,
-            });
-
-            // Get all buzzes for this question with player names
-            const allBuzzes = await storage.getBuzzesByQuestion(questionId);
-            const buzzeswithPlayerNames = await Promise.all(
-              allBuzzes.map(async (b) => {
-                const p = await storage.getPlayer(b.playerId);
-                return {
-                  playerId: b.playerId,
-                  playerName: p?.name || 'Unknown',
-                  timestamp: b.timestamp.getTime(),
-                  buzzOrder: b.buzzOrder,
-                  isFirst: b.isFirst
-                };
-              })
-            );
-
-            broadcastToGame(ws.gameId, {
-              type: "buzz_received",
-              data: {
-                playerId: ws.playerId,
-                playerName: player.name,
-                timestamp: buzz.timestamp.getTime(),
-                isFirst,
-                buzzOrder
-              }
-            });
-
-            // Send complete buzz order update
-            broadcastToGame(ws.gameId, {
-              type: "buzz_order_update",
-              data: { buzzes: buzzeswithPlayerNames }
-            });
+            // Broadcast the complete new game state
+            await broadcastGameState(ws.gameId);
             break;
           }
 
@@ -679,94 +587,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
             }
 
-            const game = await storage.getGame(ws.gameId);
-            const player = await storage.getPlayer(playerId);
-            const question = game?.currentQuestionId ? await storage.getQuestion(game.currentQuestionId) : null;
+            const newState = await gameStateManager.markAnswer(ws.gameId, playerId, isCorrect);
+            if (!newState) break;
 
-            if (!game || !player || !question) break;
-
-            // Host decides: checkmark = correct (+points), X = wrong (-points), no click = neutral (0 points)
-            let pointsAwarded = 0;
-            if (isCorrect === true) {
-              pointsAwarded = question.value; // Checkmark clicked = correct
-            } else if (isCorrect === false) {
-              pointsAwarded = -question.value; // X clicked = wrong
-            }
-            // If isCorrect is null/undefined = no click = neutral (0 points)
-
-            const newScore = player.score + pointsAwarded;
-            console.log(`Updating player ${playerId} score from ${player.score} to ${newScore} (awarded: ${pointsAwarded})`);
-            
-            const updatedPlayer = await storage.updatePlayer(playerId, { score: newScore });
-            console.log('Player updated successfully:', updatedPlayer);
-
-            // If answer was marked correct, this player gets to pick next
-            if (isCorrect === true) {
-              await storage.updateGame(ws.gameId, { lastCorrectPlayerId: playerId });
-            }
-
-            // Get all updated players to broadcast
-            const allUpdatedPlayers = await storage.getPlayersByGameId(ws.gameId);
-            console.log('Broadcasting updated scores for all players:', allUpdatedPlayers);
-
-            broadcastToGame(ws.gameId, {
-              type: "answer_marked",
-              data: {
-                playerId,
-                isCorrect: isCorrect === true,
-                pointsAwarded,
-                newScore,
-                canPickNext: isCorrect === true
-              }
-            });
-
-            // Also broadcast scores_updated with all current player scores
-            broadcastToGame(ws.gameId, {
-              type: "scores_updated", 
-              data: { players: allUpdatedPlayers }
-            });
+            // Broadcast the complete new game state
+            await broadcastGameState(ws.gameId);
             break;
           }
 
           case 'close_question': {
+            console.log('Processing close_question for gameId:', ws.gameId);
             if (!ws.gameId) break;
 
-            const game = await storage.getGame(ws.gameId);
-            let nextPicker = undefined;
+            const newState = await gameStateManager.closeQuestion(ws.gameId);
+            if (!newState) break;
 
-            if (game?.lastCorrectPlayerId) {
-              const nextPickerPlayer = await storage.getPlayer(game.lastCorrectPlayerId);
-              if (nextPickerPlayer) {
-                nextPicker = {
-                  playerId: nextPickerPlayer.id,
-                  playerName: nextPickerPlayer.name
-                };
-              }
-            }
-
-            await storage.updateGame(ws.gameId, { 
-              currentQuestionId: null,
-              status: "waiting"
-            });
-
-            broadcastToGame(ws.gameId, {
-              type: "question_closed",
-              data: { nextPicker }
-            });
+            // Broadcast the complete new game state including score summary
+            await broadcastGameState(ws.gameId);
             break;
           }
 
           case 'mark_question_used': {
             const { questionId } = message.data;
+            console.log('Processing mark_question_used:', { questionId, gameId: ws.gameId });
             if (!ws.gameId) break;
 
-            await storage.updateQuestion(questionId, { isUsed: true });
-            
-            // Notify all players that question is now used
-            broadcastToGame(ws.gameId, {
-              type: "question_marked_used",
-              data: { questionId }
-            });
+            const newState = await gameStateManager.closeQuestion(ws.gameId);
+            if (!newState) break;
+
+            // Broadcast the complete new game state
+            await broadcastGameState(ws.gameId);
             break;
           }
 

@@ -111,6 +111,46 @@ export type Buzz = typeof buzzes.$inferSelect;
 export type InsertGameAnswer = z.infer<typeof insertGameAnswerSchema>;
 export type GameAnswer = typeof gameAnswers.$inferSelect;
 
+// Complete Game State (Server-side single source of truth)
+export interface CompleteGameState {
+  // Game Info
+  gameId: string;
+  roomCode: string;
+  gameName: string;
+  hostName: string;
+  hostCode: string;
+  status: 'waiting' | 'active' | 'completed';
+  categories: string[];
+  
+  // Players
+  players: Player[];
+  
+  // Questions
+  questions: Question[];
+  
+  // Current Question State
+  currentQuestion: Question | null;
+  questionStartTime: number | null;
+  timeRemaining: number;
+  questionState: 'none' | 'active' | 'buzzing_open' | 'buzzing_closed' | 'answering' | 'completed';
+  
+  // Buzzer State
+  buzzes: (Buzz & { playerName: string })[];
+  
+  // Answer State
+  answers: GameAnswer[];
+  
+  // Game Flow
+  nextPicker: { playerId: string; playerName: string } | null;
+  
+  // Score Summary (for popups)
+  lastScoreChange: {
+    beforeScores: { playerId: string; playerName: string; score: number }[];
+    changes: { playerId: string; playerName: string; change: number }[];
+    afterScores: { playerId: string; playerName: string; score: number }[];
+  } | null;
+}
+
 // WebSocket message types
 export type WSMessage = 
   | { type: "join_game"; data: { roomCode: string; playerName?: string; playerCode?: string; isHost?: boolean; hostCode?: string; hostName?: string } }
@@ -123,19 +163,20 @@ export type WSMessage =
   | { type: "select_question"; data: { category: string; value: number; selectedBy?: string } }
   | { type: "buzz"; data: { questionId: string } }
   | { type: "submit_answer"; data: { questionId: string; answer: string; submissionTime: number } }
-  | { type: "mark_answer"; data: { playerId: string; isCorrect: boolean; acceptClose?: boolean } }
-  | { type: "mark_question_used"; data: { questionId: string } }
+  | { type: "mark_answer"; data: { playerId: string; isCorrect: boolean | null } }
   | { type: "close_question"; data: {} }
-  | { type: "end_game"; data: {} }
-  | { type: "clear_players"; data: { gameId: string } };
-
+  | { type: "mark_question_used"; data: { questionId: string } }
+  | { type: "sync_all_players"; data: { gameId: string } }
+  | { type: "update_question"; data: { questionId: string; question: string; correctAnswer: string; category: string; value: number; type: string; options?: string[] } }
+  | { type: "delete_player"; data: { playerId: string } }
+  | { type: "end_game"; data: {} };
+  
 export type WSResponse = 
   | { type: "game_created"; data: { roomCode: string; gameId: string; hostCode: string } }
   | { type: "game_joined"; data: { playerId: string; gameId: string; players: Player[]; roomCode?: string; categories?: string[]; questions?: Question[] } }
   | { type: "player_created"; data: { player: Player; playerCode: string } }
   | { type: "player_reconnected"; data: { player: Player } }
-  | { type: "game_reset"; data: { players: Player[]; questions: Question[] } }
-  | { type: "reset_success"; data: { message: string } }
+  | { type: "game_state"; data: CompleteGameState }
   | { type: "game_state_loaded"; data: { questions: Question[]; game: Game; categories: string[] } }
   | { type: "player_joined"; data: { player: Player } }
   | { type: "host_joined"; data: { player: Player } }
@@ -148,7 +189,8 @@ export type WSResponse =
   | { type: "question_closed"; data: { nextPicker?: { playerId: string; playerName: string } } }
   | { type: "game_ended"; data: { finalStandings: Array<Player & { rank: number }> } }
   | { type: "game_updated"; data: { game: Game; players: Player[] } }
+  | { type: "game_reset"; data: CompleteGameState }
   | { type: "buzz_order_update"; data: { buzzes: Array<{ playerId: string; playerName: string; timestamp: number; buzzOrder: number; isFirst: boolean }> } }
   | { type: "players_cleared"; data: { players: Player[]; message: string } }
-  | { type: "clear_players_success"; data: { message: string } }
+  | { type: "sync_complete"; data: { message: string } }
   | { type: "error"; data: { message: string } };
