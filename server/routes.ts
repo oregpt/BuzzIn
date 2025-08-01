@@ -742,8 +742,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Delete the specific player
               await storage.deletePlayer(playerId);
               
-              // Get updated player list
-              const updatedPlayers = await storage.getPlayersByGameId(ws.gameId);
+              // Update the cached game state
+              await gameStateManager.updateGameState(ws.gameId);
+              
+              // Get updated complete game state
+              const updatedGameState = await gameStateManager.getCompleteGameState(ws.gameId);
               
               // Disconnect the removed player if they're connected
               const removedPlayerWs = connections.get(playerId);
@@ -762,11 +765,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 gamePlayerIds.delete(playerId);
               }
               
-              // Broadcast the updated player list
-              broadcastToGame(ws.gameId, {
-                type: "player_removed",
-                data: { playerId, players: updatedPlayers }
-              });
+              // Broadcast the updated game state
+              if (updatedGameState) {
+                broadcastToGame(ws.gameId, {
+                  type: "game_state",
+                  data: updatedGameState
+                });
+              }
             } catch (error) {
               console.error('Error removing player:', error);
               ws.send(JSON.stringify({

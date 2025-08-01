@@ -78,6 +78,12 @@ export class GameStateManager {
     return completeState;
   }
 
+  async updateGameState(gameId: string): Promise<void> {
+    // Clear cached state to force refresh
+    this.gameStates.delete(gameId);
+    // This will rebuild state from storage on next access
+  }
+
   async selectQuestion(gameId: string, category: string, value: number, selectedBy?: string): Promise<CompleteGameState | null> {
     const state = await this.getCompleteGameState(gameId);
     if (!state) return null;

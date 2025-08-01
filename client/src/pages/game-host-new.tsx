@@ -190,7 +190,7 @@ export default function GameHost() {
 
   const handleDeletePlayer = (playerId: string) => {
     sendAction({
-      type: "delete_player",
+      type: "remove_player",
       data: { playerId }
     });
   };

@@ -169,6 +169,7 @@ export type WSMessage =
   | { type: "sync_all_players"; data: { gameId: string } }
   | { type: "update_question"; data: { questionId: string; question: string; correctAnswer: string; category: string; value: number; type: string; options?: string[] } }
   | { type: "delete_player"; data: { playerId: string } }
+  | { type: "remove_player"; data: { playerId: string } }
   | { type: "end_game"; data: {} };
   
 export type WSResponse = 
