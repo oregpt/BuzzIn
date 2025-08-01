@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
-import { Trophy, Users, Check, X, Star, ArrowLeft, RotateCcw } from "lucide-react";
+import { Trophy, Users, Check, X, Star, ArrowLeft, RotateCcw, Settings, Edit, Trash2, UserPlus, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useGameState } from "@/hooks/use-game-state";
 import { formatCurrency } from "@/lib/game-data";
-import type { CompleteGameState } from "@shared/schema";
+import type { CompleteGameState, Question } from "@shared/schema";
 
 export default function GameHost() {
   const [, navigate] = useLocation();
@@ -16,6 +20,16 @@ export default function GameHost() {
   // UI state for dialogs and modals (not game state)
   const [showQuestion, setShowQuestion] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showPlayerDialog, setShowPlayerDialog] = useState(false);
+  const [showEditQuestion, setShowEditQuestion] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const [editQuestionForm, setEditQuestionForm] = useState({
+    question: "",
+    correctAnswer: "",
+    category: "",
+    value: 0
+  });
 
   // Initialize from game setup or host join
   useEffect(() => {
@@ -133,6 +147,55 @@ export default function GameHost() {
     });
   };
 
+  const handleCreatePlayer = () => {
+    if (!newPlayerName.trim()) return;
+    
+    sendAction({
+      type: "create_player",
+      data: { playerName: newPlayerName.trim() }
+    });
+    
+    setNewPlayerName("");
+    setShowPlayerDialog(false);
+  };
+
+  const handleDeletePlayer = (playerId: string) => {
+    sendAction({
+      type: "delete_player",
+      data: { playerId }
+    });
+  };
+
+  const handleEditQuestion = (question: Question) => {
+    setSelectedQuestion(question);
+    setEditQuestionForm({
+      question: question.question,
+      correctAnswer: question.correctAnswer,
+      category: question.category,
+      value: question.value
+    });
+    setShowEditQuestion(true);
+  };
+
+  const handleUpdateQuestion = () => {
+    if (!selectedQuestion) return;
+    
+    sendAction({
+      type: "update_question",
+      data: {
+        questionId: selectedQuestion.id,
+        question: editQuestionForm.question,
+        correctAnswer: editQuestionForm.correctAnswer,
+        category: editQuestionForm.category,
+        value: editQuestionForm.value,
+        type: "standard"
+      }
+    });
+    
+    setShowEditQuestion(false);
+    setSelectedQuestion(null);
+  };
+
   const nonHostPlayers = gameState.players.filter(p => !p.isHost);
   const categories = gameState.categories || [];
 
@@ -148,6 +211,39 @@ export default function GameHost() {
           <Button variant="outline" onClick={handleRefreshHost}>
             Refresh Host
           </Button>
+          <Dialog open={showPlayerDialog} onOpenChange={setShowPlayerDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Player
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Player</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="playerName">Player Name</Label>
+                  <Input
+                    id="playerName"
+                    value={newPlayerName}
+                    onChange={(e) => setNewPlayerName(e.target.value)}
+                    placeholder="Enter player name"
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreatePlayer()}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowPlayerDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreatePlayer}>
+                    Create Player
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button variant="outline" onClick={() => navigate('/')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Exit
@@ -182,18 +278,29 @@ export default function GameHost() {
                   const isCurrent = gameState.currentQuestion?.id === question?.id;
 
                   return (
-                    <Button
-                      key={`${category}-${value}`}
-                      variant={isCurrent ? "default" : isUsed ? "secondary" : "outline"}
-                      disabled={isUsed}
-                      onClick={() => handleSelectQuestion(category, value)}
-                      className={`h-20 text-lg font-bold ${
-                        isCurrent ? "bg-green-500 text-white" :
-                        isUsed ? "opacity-50" : ""
-                      }`}
-                    >
-                      {formatCurrency(value)}
-                    </Button>
+                    <div key={`${category}-${value}`} className="relative group">
+                      <Button
+                        variant={isCurrent ? "default" : isUsed ? "secondary" : "outline"}
+                        disabled={isUsed}
+                        onClick={() => handleSelectQuestion(category, value)}
+                        className={`h-20 w-full text-lg font-bold ${
+                          isCurrent ? "bg-green-500 text-white" :
+                          isUsed ? "opacity-50" : ""
+                        }`}
+                      >
+                        {formatCurrency(value)}
+                      </Button>
+                      {question && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditQuestion(question)}
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -286,14 +393,38 @@ export default function GameHost() {
           <div className="grid gap-2">
             {nonHostPlayers.map(player => (
               <div key={player.id} className="flex items-center justify-between p-3 border rounded">
-                <div>
-                  <span className="font-medium">{player.name}</span>
-                  {gameState.nextPicker?.playerId === player.id && (
-                    <Star className="inline ml-2 h-4 w-4 text-yellow-500" />
-                  )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{player.name}</span>
+                    {gameState.nextPicker?.playerId === player.id && (
+                      <Star className="h-4 w-4 text-yellow-500" />
+                    )}
+                    {player.playerCode && (
+                      <Button
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(player.playerCode);
+                          toast({ title: "Player code copied!", description: `${player.playerCode}` });
+                        }}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        {player.playerCode}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
+                <div className="flex items-center gap-2">
                   <span className="font-bold text-lg">{formatCurrency(player.score)}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDeletePlayer(player.id)}
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -318,6 +449,60 @@ export default function GameHost() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Question Dialog */}
+      <Dialog open={showEditQuestion} onOpenChange={setShowEditQuestion}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Question</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Input
+                id="category"
+                value={editQuestionForm.category}
+                onChange={(e) => setEditQuestionForm({...editQuestionForm, category: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="value">Value</Label>
+              <Input
+                id="value"
+                type="number"
+                value={editQuestionForm.value}
+                onChange={(e) => setEditQuestionForm({...editQuestionForm, value: parseInt(e.target.value)})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="question">Question</Label>
+              <Textarea
+                id="question"
+                value={editQuestionForm.question}
+                onChange={(e) => setEditQuestionForm({...editQuestionForm, question: e.target.value})}
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="answer">Correct Answer</Label>
+              <Textarea
+                id="answer"
+                value={editQuestionForm.correctAnswer}
+                onChange={(e) => setEditQuestionForm({...editQuestionForm, correctAnswer: e.target.value})}
+                rows={2}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowEditQuestion(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateQuestion}>
+                Update Question
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
