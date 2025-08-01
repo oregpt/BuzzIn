@@ -216,11 +216,11 @@ export default function PlayerManagement({ players, roomCode, onClose }: PlayerM
                   <div>2. Give them their Player Code (shown above)</div>
                   <div>3. They enter both codes on the join page</div>
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div className="font-medium mb-2">For walk-in players:</div>
-                  <div>They can still join with just their name and Room Code: <span className="font-mono font-bold">{roomCode}</span></div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    Note: Walk-in players won't be able to reconnect if they disconnect
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <div className="font-medium mb-2 text-yellow-800 dark:text-yellow-200">Important:</div>
+                  <div className="text-yellow-700 dark:text-yellow-300">All players must be pre-created by you. No walk-in players are allowed.</div>
+                  <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                    This ensures you have complete control over who participates in your game.
                   </div>
                 </div>
               </div>

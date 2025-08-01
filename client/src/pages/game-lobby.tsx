@@ -123,11 +123,11 @@ export default function GameLobby() {
         },
       });
     } else {
-      // Join as player - only need name
-      if (!joinForm.playerName.trim()) {
+      // Join as player - need player code
+      if (!authCode.trim()) {
         toast({
           title: "Error",
-          description: "Please enter your name first",
+          description: "Player code required. Contact the host to get your code.",
           variant: "destructive",
         });
         return;
@@ -137,8 +137,7 @@ export default function GameLobby() {
         type: "join_game",
         data: {
           roomCode: selectedGame.roomCode,
-          playerName: joinForm.playerName,
-          playerCode: authCode.trim() || undefined
+          playerCode: authCode.trim()
         },
       });
     }
@@ -355,26 +354,12 @@ export default function GameLobby() {
               </Button>
             </div>
 
-            {/* Player Name Input (only for player role) */}
-            {joinType === 'player' && (
-              <div className="space-y-2">
-                <Label htmlFor="dialogPlayerName" className="text-gray-300 mb-2 block">
-                  Your Name
-                </Label>
-                <input
-                  id="dialogPlayerName"
-                  placeholder="Enter your name"
-                  value={joinForm.playerName}
-                  onChange={(e) => setJoinForm(prev => ({ ...prev, playerName: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            )}
+            {/* Player Name Input - Hidden for players since they're pre-created */}
 
             {/* Auth Code Input */}
             <div className="space-y-2">
               <Label htmlFor="authCode" className="text-gray-300 mb-2 block">
-                {joinType === 'host' ? 'Host Code' : 'Player Code (Optional)'}
+                {joinType === 'host' ? 'Host Code' : 'Player Code (Required)'}
               </Label>
               <input
                 id="authCode"
@@ -387,7 +372,7 @@ export default function GameLobby() {
               <p className="text-xs text-gray-400">
                 {joinType === 'host' 
                   ? 'Enter the host code to control this game' 
-                  : 'If you have a player code, enter it to reconnect. Leave blank for new player.'
+                  : 'Enter the player code provided by the host. All players must be pre-created.'
                 }
               </p>
             </div>
@@ -405,7 +390,7 @@ export default function GameLobby() {
               onClick={handleJoinDialogSubmit}
               disabled={
                 (joinType === 'host' && !authCode.trim()) || 
-                (joinType === 'player' && !joinForm.playerName.trim() && !authCode.trim())
+                (joinType === 'player' && !authCode.trim())
               }
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >

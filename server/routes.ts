@@ -235,71 +235,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             let player: Player;
 
-            // Check if this is a reconnection with player code
-            if (playerCode) {
-              const existingPlayer = await storage.getPlayerByCode(playerCode, game.id);
-              if (existingPlayer) {
-                // Reconnect existing player
-                player = await storage.updatePlayer(existingPlayer.id, {
-                  isConnected: true,
-                  socketId: null
-                }) || existingPlayer;
-                
-                ws.playerId = player.id;
-                ws.gameId = game.id;
-                connections.set(player.id, ws);
-                
-                if (!gameConnections.has(game.id)) {
-                  gameConnections.set(game.id, new Set());
-                }
-                gameConnections.get(game.id)!.add(player.id);
-
-                const allPlayers = await storage.getPlayersByGameId(game.id);
-
-                ws.send(JSON.stringify({
-                  type: "player_reconnected",
-                  data: { player }
-                }));
-
-                const joinResponse: WSResponse = {
-                  type: "game_joined",
-                  data: { playerId: player.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode }
-                };
-                console.log('Sending game_joined response to reconnected player:', player.id);
-                ws.send(JSON.stringify(joinResponse));
-
-                broadcastToGame(game.id, {
-                  type: "player_joined",
-                  data: { player }
-                });
-                break;
-              } else {
-                ws.send(JSON.stringify({
-                  type: "error",
-                  data: { message: "Invalid player code" }
-                }));
-                break;
-              }
-            }
-
-            // Create new player (either first-time join or no player code provided)
-            if (!playerName) {
+            // All players must have a valid player code - no walk-ins allowed
+            if (!playerCode) {
               ws.send(JSON.stringify({
-                type: "error", 
-                data: { message: "Player name required for new players" }
+                type: "error",
+                data: { message: "Player code required. Contact the host to get your player code." }
               }));
               break;
             }
 
-            player = await storage.createPlayer({
-              gameId: game.id,
-              name: playerName,
-              score: 0,
-              isHost: false,
-              socketId: null,
-              playerCode: storage.generateAuthCode(), // Generate unique player code
+            const existingPlayer = await storage.getPlayerByCode(playerCode, game.id);
+            if (!existingPlayer) {
+              ws.send(JSON.stringify({
+                type: "error",
+                data: { message: "Invalid player code. Contact the host for the correct code." }
+              }));
+              break;
+            }
+
+            // Connect or reconnect the pre-created player
+            player = await storage.updatePlayer(existingPlayer.id, {
               isConnected: true,
-            });
+              socketId: null
+            }) || existingPlayer;
 
             ws.playerId = player.id;
             ws.gameId = game.id;
@@ -316,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "game_joined",
               data: { playerId: player.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode }
             };
-            console.log('Sending game_joined response to player:', player.id);
+            console.log('Sending game_joined response to reconnected player:', player.id);
             ws.send(JSON.stringify(joinResponse));
 
             broadcastToGame(game.id, {
@@ -686,7 +644,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             broadcastToGame(ws.gameId, {
               type: "scores_updated", 
               data: { players: allUpdatedPlayers }
-            });
             });
             break;
           }

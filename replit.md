@@ -111,11 +111,12 @@ The application is structured for easy development with hot reloading and clear 
 - **Backend API**: Full CRUD operations for questions with validation and error handling
 
 ### Simplified Authentication System (July 30, 2025)
-- **Players**: Only need name and room code to join games - no authentication codes required
+- **Players**: Must be pre-created by host with unique player codes - no walk-in players allowed
 - **Hosts**: Require 6-character host code for game control and administration  
 - Room codes (4-letter) identify games for easy discovery
 - Host codes displayed in notifications for secure sharing
 - Database persistence of host authentication codes per game
+- All players require valid player codes for complete access control
 
 ### Simplified Lobby Interface (July 29, 2025)
 - Removed separate "Join as Host" and "Join by Code" cards from main lobby
