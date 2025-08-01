@@ -359,7 +359,34 @@ export default function GameHost() {
           {gameState.currentQuestion && (
             <div className="space-y-6">
               <div className="p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg text-xl text-white shadow-lg border border-blue-400">
-                {gameState.currentQuestion.question}
+                <div className="mb-4">
+                  {gameState.currentQuestion.question}
+                </div>
+                
+                {/* Show options for multiple choice questions */}
+                {gameState.currentQuestion.type === 'multiple_choice' && Array.isArray(gameState.currentQuestion.options) && (
+                  <div className="mt-4 space-y-2">
+                    <h5 className="font-semibold text-lg">Options:</h5>
+                    <div className="grid gap-2">
+                      {gameState.currentQuestion.options.map((option: string, index: number) => (
+                        <div key={index} className="p-2 bg-white/10 rounded text-lg">
+                          <span className="font-bold">{String.fromCharCode(65 + index)}.</span> {option}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show True/False for true/false questions */}
+                {gameState.currentQuestion.type === 'true_false' && (
+                  <div className="mt-4 space-y-2">
+                    <h5 className="font-semibold text-lg">Choose:</h5>
+                    <div className="flex gap-4">
+                      <div className="p-3 bg-white/10 rounded text-lg font-bold">TRUE</div>
+                      <div className="p-3 bg-white/10 rounded text-lg font-bold">FALSE</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">

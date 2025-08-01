@@ -160,7 +160,34 @@ export default function GamePlayer() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="p-4 bg-blue-900 rounded text-lg">
-                {gameState.currentQuestion.question}
+                <div className="mb-4">
+                  {gameState.currentQuestion.question}
+                </div>
+                
+                {/* Show options for multiple choice questions */}
+                {gameState.currentQuestion.type === 'multiple_choice' && Array.isArray(gameState.currentQuestion.options) && (
+                  <div className="mt-4 space-y-2">
+                    <h5 className="font-semibold text-base text-blue-200">Options:</h5>
+                    <div className="grid gap-2">
+                      {gameState.currentQuestion.options.map((option: string, index: number) => (
+                        <div key={index} className="p-2 bg-white/10 rounded">
+                          <span className="font-bold">{String.fromCharCode(65 + index)}.</span> {option}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show True/False for true/false questions */}
+                {gameState.currentQuestion.type === 'true_false' && (
+                  <div className="mt-4 space-y-2">
+                    <h5 className="font-semibold text-base text-blue-200">Choose:</h5>
+                    <div className="flex gap-4">
+                      <div className="p-2 bg-white/10 rounded font-bold">TRUE</div>
+                      <div className="p-2 bg-white/10 rounded font-bold">FALSE</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Answer Input and Submit/Buzz Button */}
