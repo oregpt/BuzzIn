@@ -22,7 +22,9 @@ export default function GameHost() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [showPlayerDialog, setShowPlayerDialog] = useState(false);
   const [showEditQuestion, setShowEditQuestion] = useState(false);
+  const [showQuestionConfirm, setShowQuestionConfirm] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [questionToSelect, setQuestionToSelect] = useState<{category: string, value: number} | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [editQuestionForm, setEditQuestionForm] = useState({
     question: "",
@@ -30,6 +32,7 @@ export default function GameHost() {
     category: "",
     value: 0
   });
+  const [timeRemaining, setTimeRemaining] = useState(0);
 
   // Initialize from game setup or host join
   useEffect(() => {
@@ -79,15 +82,27 @@ export default function GameHost() {
     }
   }, [error, toast]);
 
-  // Auto-show question when one is selected
+  // Auto-show question when one is selected and start timer
   useEffect(() => {
     if (gameState?.currentQuestion) {
       setShowQuestion(true);
+      setTimeRemaining(30); // 30 second timer as requested
     } else {
       setShowQuestion(false);
       setShowAnswer(false);
+      setTimeRemaining(0);
     }
   }, [gameState?.currentQuestion]);
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (timeRemaining > 0 && gameState?.currentQuestion) {
+      const timer = setTimeout(() => {
+        setTimeRemaining(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [timeRemaining, gameState?.currentQuestion]);
 
   if (isLoading) {
     return (
@@ -111,10 +126,24 @@ export default function GameHost() {
   }
 
   const handleSelectQuestion = (category: string, value: number) => {
+    setQuestionToSelect({ category, value });
+    setShowQuestionConfirm(true);
+  };
+
+  const confirmSelectQuestion = () => {
+    if (!questionToSelect) return;
+    
     sendAction({
       type: "select_question",
-      data: { category, value, selectedBy: undefined }
+      data: { 
+        category: questionToSelect.category, 
+        value: questionToSelect.value, 
+        selectedBy: undefined 
+      }
     });
+    
+    setShowQuestionConfirm(false);
+    setQuestionToSelect(null);
   };
 
   const handleMarkAnswer = (playerId: string, isCorrect: boolean | null) => {
@@ -316,8 +345,17 @@ export default function GameHost() {
             <CardTitle>Current Question</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded">
-              <h3 className="font-bold text-lg">{gameState.currentQuestion.category} - {formatCurrency(gameState.currentQuestion.value)}</h3>
+            <div className="p-4 bg-blue-50 rounded relative">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold text-lg">{gameState.currentQuestion.category} - {formatCurrency(gameState.currentQuestion.value)}</h3>
+                <div className={`text-2xl font-bold px-3 py-1 rounded ${
+                  timeRemaining <= 5 ? 'bg-red-500 text-white' : 
+                  timeRemaining <= 10 ? 'bg-yellow-500 text-white' : 
+                  'bg-green-500 text-white'
+                }`}>
+                  {timeRemaining}s
+                </div>
+              </div>
               <p className="mt-2">{gameState.currentQuestion.question}</p>
             </div>
 
@@ -404,8 +442,10 @@ export default function GameHost() {
                         size="sm" 
                         variant="ghost"
                         onClick={() => {
-                          navigator.clipboard.writeText(player.playerCode);
-                          toast({ title: "Player code copied!", description: `${player.playerCode}` });
+                          if (player.playerCode) {
+                            navigator.clipboard.writeText(player.playerCode);
+                            toast({ title: "Player code copied!", description: `${player.playerCode}` });
+                          }
                         }}
                         className="h-6 px-2 text-xs"
                       >
@@ -498,6 +538,31 @@ export default function GameHost() {
               </Button>
               <Button onClick={handleUpdateQuestion}>
                 Update Question
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Question Selection Confirmation Dialog */}
+      <Dialog open={showQuestionConfirm} onOpenChange={setShowQuestionConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Question</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>
+              Are you sure you want to select the question from <strong>{questionToSelect?.category}</strong> for <strong>{formatCurrency(questionToSelect?.value || 0)}</strong>?
+            </p>
+            <p className="text-sm text-gray-600">
+              This will start a 30-second timer and show the question to all players.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowQuestionConfirm(false)}>
+                Cancel
+              </Button>
+              <Button onClick={confirmSelectQuestion}>
+                Start Question
               </Button>
             </div>
           </div>
