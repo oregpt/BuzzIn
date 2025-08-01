@@ -247,6 +247,22 @@ export default function GameHost() {
     }
   });
 
+  // Handle player removal
+  onMessage("player_removed", (data) => {
+    setGameState(prev => ({
+      ...prev,
+      players: data.players || prev.players.filter(p => p.id !== data.playerId)
+    }));
+  });
+
+  // Handle players cleared
+  onMessage("players_cleared", (data) => {
+    setGameState(prev => ({
+      ...prev,
+      players: data.players || prev.players.filter(p => p.isHost)
+    }));
+  });
+
   onMessage("question_selected", (data) => {
     console.log('Question selected:', data);
     if (data.question) {
