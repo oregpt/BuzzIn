@@ -657,12 +657,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // If isCorrect is null/undefined = no click = neutral (0 points)
 
             const newScore = player.score + pointsAwarded;
-            await storage.updatePlayer(playerId, { score: newScore });
+            console.log(`Updating player ${playerId} score from ${player.score} to ${newScore} (awarded: ${pointsAwarded})`);
+            
+            const updatedPlayer = await storage.updatePlayer(playerId, { score: newScore });
+            console.log('Player updated successfully:', updatedPlayer);
 
             // If answer was marked correct, this player gets to pick next
             if (isCorrect === true) {
               await storage.updateGame(ws.gameId, { lastCorrectPlayerId: playerId });
             }
+
+            // Get all updated players to broadcast
+            const allUpdatedPlayers = await storage.getPlayersByGameId(ws.gameId);
+            console.log('Broadcasting updated scores for all players:', allUpdatedPlayers);
 
             broadcastToGame(ws.gameId, {
               type: "answer_marked",
@@ -673,6 +680,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 newScore,
                 canPickNext: isCorrect === true
               }
+            });
+
+            // Also broadcast scores_updated with all current player scores
+            broadcastToGame(ws.gameId, {
+              type: "scores_updated", 
+              data: { players: allUpdatedPlayers }
+            });
             });
             break;
           }

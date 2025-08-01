@@ -327,6 +327,14 @@ export default function GameHost() {
     });
   });
 
+  onMessage("scores_updated", (data) => {
+    console.log('Received scores update:', data);
+    setGameState(prev => ({ 
+      ...prev, 
+      players: data.players 
+    }));
+  });
+
   onMessage("question_closed", (data) => {
     setGameState(prev => ({
       ...prev,
@@ -672,6 +680,10 @@ export default function GameHost() {
 
   const firstBuzzer = gameState.buzzerResults.find(b => b.isFirst);
   const sortedPlayers = [...(gameState.players || [])].sort((a, b) => b.score - a.score);
+  
+  // Debug logging for scoring display
+  console.log('Game state players:', gameState.players);
+  console.log('Sorted players:', sortedPlayers);
 
   return (
     <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">

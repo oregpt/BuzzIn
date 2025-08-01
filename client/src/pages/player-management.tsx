@@ -25,7 +25,12 @@ export default function PlayerManagement({ players, roomCode, onClose }: PlayerM
 
   // Handle player creation response
   onMessage("player_created", (data) => {
-    setCreatedPlayerCodes(prev => [...prev, { name: data.player.name, code: data.playerCode }]);
+    setCreatedPlayerCodes(prev => {
+      // Check if this player code already exists to prevent duplicates
+      const exists = prev.some(p => p.code === data.playerCode);
+      if (exists) return prev;
+      return [...prev, { name: data.player.name, code: data.playerCode }];
+    });
     toast({
       title: "Player Created",
       description: `${data.player.name} can join with code: ${data.playerCode}`,
@@ -96,12 +101,22 @@ export default function PlayerManagement({ players, roomCode, onClose }: PlayerM
           {createdPlayerCodes.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Newly Created Player Codes</CardTitle>
+                <CardTitle className="text-lg flex items-center justify-between">
+                  Newly Created Player Codes
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCreatedPlayerCodes([])}
+                    className="text-xs"
+                  >
+                    Clear
+                  </Button>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {createdPlayerCodes.map((player, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <div key={`${player.code}-${index}`} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                       <div>
                         <div className="font-medium">{player.name}</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">

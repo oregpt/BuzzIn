@@ -405,11 +405,12 @@ export default function GameLobby() {
               onClick={handleJoinDialogSubmit}
               disabled={
                 (joinType === 'host' && !authCode.trim()) || 
-                (joinType === 'player' && !joinForm.playerName.trim())
+                (joinType === 'player' && !joinForm.playerName.trim() && !authCode.trim())
               }
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {joinType === 'host' ? 'Join as Host' : 'Join as Player'}
+              {joinType === 'host' ? 'Join as Host' : 
+               authCode.trim() ? 'Reconnect' : 'Join as Player'}
             </Button>
           </DialogFooter>
         </DialogContent>
