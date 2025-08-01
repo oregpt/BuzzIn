@@ -64,6 +64,12 @@ export default function GameHost() {
 
   const [showQuestion, setShowQuestion] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showScorePopup, setShowScorePopup] = useState(false);
+  const [scoreData, setScoreData] = useState<{
+    beforeScores: { playerId: string; playerName: string; score: number }[];
+    changes: { playerId: string; playerName: string; change: number }[];
+    afterScores: { playerId: string; playerName: string; score: number }[];
+  } | null>(null);
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showScores, setShowScores] = useState(false);
@@ -530,17 +536,49 @@ export default function GameHost() {
   };
 
   const handleMarkUsed = () => {
+    if (!gameState.currentQuestion || !gameState.gameId) return;
+
+    // Capture score data for the popup
+    // Get current scores as "after" and calculate "before" by reversing recent changes
+    const afterScores = gameState.players.map(p => ({
+      playerId: p.id,
+      playerName: p.name,
+      score: p.score
+    }));
+
+    // For now, just show current scores (we'll improve this with real tracking later)
+    const beforeScores = gameState.players.map(p => ({
+      playerId: p.id,
+      playerName: p.name,
+      score: 0 // Will show change from start of question
+    }));
+
+    const changes = gameState.players.map(p => ({
+      playerId: p.id,
+      playerName: p.name,
+      change: p.score // Show current score as the change for now
+    }));
+
+    setScoreData({
+      beforeScores,
+      changes,
+      afterScores
+    });
+
     // Send message to mark question as used on server
-    if (gameState.currentQuestion && gameState.gameId) {
-      sendMessage({
-        type: "mark_question_used",
-        data: { 
-          questionId: gameState.currentQuestion.id 
-        }
-      });
-    }
-    // Then close the question
-    handleCloseQuestion();
+    sendMessage({
+      type: "mark_question_used",
+      data: { 
+        questionId: gameState.currentQuestion.id 
+      }
+    });
+    
+    // Close the question first
+    setShowQuestion(false);
+    setShowAnswer(false);
+    
+    // Then show score popup
+    setShowScorePopup(true);
   };
 
   const handleEndGame = () => {
@@ -591,6 +629,27 @@ export default function GameHost() {
     toast({
       title: "Syncing Players",
       description: "Sending current game state to all players...",
+    });
+  };
+
+  const handleRefreshHost = () => {
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please try refreshing.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    sendMessage({
+      type: "get_game_state",
+      data: { gameId: gameState.gameId }
+    });
+
+    toast({
+      title: "Refreshing Host...",
+      description: "Getting latest game state...",
     });
   };
 
@@ -826,6 +885,14 @@ export default function GameHost() {
                   >
                     <Users className="mr-2 h-4 w-4" />
                     Sync All Players
+                  </Button>
+                  <Button
+                    onClick={handleRefreshHost}
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Refresh Host
                   </Button>
                   <Button
                     onClick={handleClearAllPlayers}
@@ -1135,10 +1202,10 @@ export default function GameHost() {
                     </Button>
                     <Button
                       onClick={handleMarkUsed}
-                      className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                     >
-                      <Check className="mr-2" />
-                      Mark Used & Return to Board
+                      <Trophy className="mr-2" />
+                      Scores & Return to Board
                     </Button>
                   </div>
                 )}
@@ -1461,6 +1528,111 @@ export default function GameHost() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Score Summary Popup */}
+      <Dialog open={showScorePopup} onOpenChange={setShowScorePopup}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-2xl font-bold">
+              <Trophy className="text-yellow-500 mr-3" />
+              Question Complete - Score Summary
+            </DialogTitle>
+            <DialogDescription>
+              Here's how the scores changed after that question:
+            </DialogDescription>
+          </DialogHeader>
+          
+          {scoreData && (
+            <div className="space-y-6">
+              {/* Score Changes Table */}
+              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">Player</th>
+                      <th className="px-4 py-3 text-center font-semibold text-gray-900 dark:text-white">Before</th>
+                      <th className="px-4 py-3 text-center font-semibold text-gray-900 dark:text-white">Change</th>
+                      <th className="px-4 py-3 text-center font-semibold text-gray-900 dark:text-white">After</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {scoreData.beforeScores.map((player, index) => {
+                      const change = scoreData.changes[index];
+                      const after = scoreData.afterScores[index];
+                      
+                      return (
+                        <tr key={player.playerId} className="bg-white dark:bg-gray-900">
+                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                            {player.playerName}
+                          </td>
+                          <td className="px-4 py-3 text-center font-game font-bold text-gray-600 dark:text-gray-300">
+                            {formatCurrency(player.score)}
+                          </td>
+                          <td className={`px-4 py-3 text-center font-game font-bold ${
+                            change.change > 0 
+                              ? 'text-green-600 dark:text-green-400' 
+                              : change.change < 0 
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-gray-500 dark:text-gray-400'
+                          }`}>
+                            {change.change > 0 ? '+' : ''}{formatCurrency(change.change)}
+                          </td>
+                          <td className="px-4 py-3 text-center font-game font-bold text-blue-600 dark:text-blue-400">
+                            {formatCurrency(after.score)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Current Leaderboard */}
+              <div>
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Current Standings</h4>
+                <div className="grid gap-2">
+                  {scoreData.afterScores
+                    .sort((a, b) => b.score - a.score)
+                    .map((player, index) => (
+                      <div 
+                        key={player.playerId} 
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          index === 0 
+                            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-700' 
+                            : 'bg-gray-50 dark:bg-gray-800'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <span className={`font-bold text-lg mr-3 ${
+                            index === 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-500'
+                          }`}>
+                            #{index + 1}
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {player.playerName}
+                          </span>
+                          {index === 0 && <Trophy className="text-yellow-500 ml-2 w-5 h-5" />}
+                        </div>
+                        <span className="font-game font-bold text-xl text-blue-600 dark:text-blue-400">
+                          {formatCurrency(player.score)}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              onClick={() => setShowScorePopup(false)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8"
+            >
+              Continue Game
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
