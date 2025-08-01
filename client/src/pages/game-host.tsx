@@ -1109,11 +1109,11 @@ export default function GameHost() {
                         Incorrect (-{formatCurrency(gameState.currentQuestion.value)})
                       </Button>
                       <Button
-                        onClick={() => handleMarkAnswer(firstBuzzer.playerId, false, true)}
+                        onClick={() => handleMarkAnswer(firstBuzzer.playerId, true)}
                         className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
                       >
                         <Star className="mr-2" />
-                        Accept Close Answer
+                        Accept Close Answer (+{formatCurrency(gameState.currentQuestion.value)})
                       </Button>
                     </div>
                   </div>

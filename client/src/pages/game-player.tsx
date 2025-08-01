@@ -221,7 +221,7 @@ export default function GamePlayer() {
 
     const interval = setInterval(() => {
       const elapsed = (Date.now() - playerState.questionStartTime!) / 1000;
-      const remaining = Math.max(0, 15 - elapsed);
+      const remaining = Math.max(0, 30 - elapsed);
       
       setPlayerState(prev => ({
         ...prev,
