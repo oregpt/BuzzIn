@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
-import { Hand, Users, X } from "lucide-react";
+import { Hand, Users, X, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/game-data";
 import type { Player, Question } from "@shared/schema";
@@ -213,6 +213,57 @@ export default function GamePlayer() {
     });
   });
 
+  // Handle full sync updates from server
+  onMessage("full_sync", (data) => {
+    const urlParams = new URLSearchParams(location.search);
+    const currentPlayerId = urlParams.get('player');
+    
+    if (data.playerSpecific && data.playerSpecific.playerId === currentPlayerId) {
+      setPlayerState(prev => ({
+        ...prev,
+        playerName: data.playerSpecific.playerName,
+        score: data.playerSpecific.score,
+        otherPlayers: data.players.filter((p: any) => p.id !== currentPlayerId),
+        currentQuestion: data.currentQuestion,
+        questionStartTime: data.questionStartTime,
+        timeRemaining: data.currentQuestion ? 30 : prev.timeRemaining,
+        hasSubmitted: false,
+        answer: "",
+        gameStatus: data.currentQuestion 
+          ? `Question active: ${data.currentQuestion.category} - ${formatCurrency(data.currentQuestion.value)}`
+          : "Waiting for host to select next question...",
+        showResults: false,
+        submittedAnswers: []
+      }));
+      
+      toast({
+        title: "Synced!",
+        description: "You're now up to date with the game.",
+      });
+    } else {
+      // Handle sync for all players when no specific player data
+      setPlayerState(prev => ({
+        ...prev,
+        otherPlayers: data.players.filter((p: any) => p.id !== currentPlayerId),
+        currentQuestion: data.currentQuestion,
+        questionStartTime: data.questionStartTime,
+        timeRemaining: data.currentQuestion ? 30 : prev.timeRemaining,
+        hasSubmitted: false,
+        answer: "",
+        gameStatus: data.currentQuestion 
+          ? `Question active: ${data.currentQuestion.category} - ${formatCurrency(data.currentQuestion.value)}`
+          : "Waiting for host to select next question...",
+        showResults: false,
+        submittedAnswers: []
+      }));
+      
+      toast({
+        title: "Game Synced",
+        description: "Game state updated by host.",
+      });
+    }
+  });
+
   // Timer effect for countdown
   useEffect(() => {
     if (!playerState.currentQuestion || playerState.hasSubmitted || playerState.questionStartTime === null) {
@@ -264,6 +315,30 @@ export default function GamePlayer() {
     navigate('/');
   };
 
+  const handleRefreshMe = () => {
+    const urlParams = new URLSearchParams(location.search);
+    const gameId = urlParams.get('game');
+    
+    if (!gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please rejoin the game.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    sendMessage({
+      type: "refresh_me",
+      data: { gameId }
+    });
+
+    toast({
+      title: "Refreshing...",
+      description: "Getting latest game state...",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-6 max-w-lg">
@@ -276,6 +351,15 @@ export default function GamePlayer() {
             className="absolute top-2 right-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 w-8 h-8 p-0"
           >
             <X className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={handleRefreshMe}
+            variant="ghost"
+            size="sm"
+            className="absolute top-2 left-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 w-8 h-8 p-0"
+            title="Refresh Me - Get latest game state"
+          >
+            <RotateCcw className="w-4 h-4" />
           </Button>
           <CardContent className="pt-6">
             <h1 className="font-game text-2xl font-bold text-blue-600 dark:text-yellow-400 mb-2">

@@ -411,6 +411,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
           }
 
+          case 'sync_all_players': {
+            // Host-triggered sync of all players to current game state
+            if (!ws.gameId) break;
+            
+            const game = await storage.getGame(ws.gameId);
+            const questions = await storage.getQuestionsByGameId(ws.gameId);
+            const allPlayers = await storage.getPlayersByGameId(ws.gameId);
+            
+            if (!game) break;
+
+            // Get current question if one is active
+            let currentQuestion = null;
+            let questionStartTime = null;
+            if (game.currentQuestionId) {
+              currentQuestion = await storage.getQuestion(game.currentQuestionId);
+              // For sync, assume question started recently (players will get remaining time)
+              questionStartTime = Date.now() - 5000; // Give 25 seconds remaining
+            }
+
+            // Broadcast complete sync to all players
+            broadcastToGame(ws.gameId, {
+              type: "full_sync",
+              data: {
+                game,
+                questions,
+                players: allPlayers,
+                currentQuestion,
+                questionStartTime,
+                categories: (game.categories as string[]) || []
+              }
+            });
+
+            sendToPlayer(ws.playerId || '', {
+              type: "sync_complete",
+              data: { message: "All players have been synchronized" }
+            });
+            break;
+          }
+
+          case 'refresh_me': {
+            // Player-triggered sync to get current game state
+            if (!ws.gameId || !ws.playerId) break;
+            
+            const game = await storage.getGame(ws.gameId);
+            const questions = await storage.getQuestionsByGameId(ws.gameId);
+            const allPlayers = await storage.getPlayersByGameId(ws.gameId);
+            const player = await storage.getPlayer(ws.playerId);
+            
+            if (!game || !player) break;
+
+            // Get current question if one is active
+            let currentQuestion = null;
+            let questionStartTime = null;
+            if (game.currentQuestionId) {
+              currentQuestion = await storage.getQuestion(game.currentQuestionId);
+              // For refresh, give them remaining time from when question likely started
+              questionStartTime = Date.now() - 5000; // Assume 5 seconds elapsed
+            }
+
+            // Send complete state to this specific player
+            sendToPlayer(ws.playerId, {
+              type: "full_sync",
+              data: {
+                game,
+                questions,
+                players: allPlayers,
+                currentQuestion,
+                questionStartTime,
+                categories: (game.categories as string[]) || [],
+                playerSpecific: {
+                  playerId: player.id,
+                  playerName: player.name,
+                  score: player.score,
+                  isHost: player.isHost
+                }
+              }
+            });
+            break;
+          }
+
           case 'select_question': {
             const { category, value, selectedBy } = message.data;
             console.log('Processing select_question:', { category, value, gameId: ws.gameId, playerId: ws.playerId });

@@ -263,6 +263,33 @@ export default function GameHost() {
     }));
   });
 
+  // Handle sync complete feedback
+  onMessage("sync_complete", (data) => {
+    toast({
+      title: "Sync Complete",
+      description: data.message,
+    });
+  });
+
+  // Handle full sync updates
+  onMessage("full_sync", (data) => {
+    setGameState(prev => ({
+      ...prev,
+      players: data.players,
+      questions: data.questions,
+      categories: data.categories,
+      currentQuestion: data.currentQuestion,
+      questionStartTime: data.questionStartTime,
+      timeRemaining: data.currentQuestion ? 30 : prev.timeRemaining,
+      buzzerResults: [],
+      submittedAnswers: []
+    }));
+
+    if (data.currentQuestion) {
+      setShowQuestion(true);
+    }
+  });
+
   onMessage("question_selected", (data) => {
     console.log('Question selected:', data);
     if (data.question) {
@@ -546,6 +573,27 @@ export default function GameHost() {
     setShowResetConfirm(true);
   };
 
+  const handleSyncAllPlayers = () => {
+    if (!gameState.gameId) {
+      toast({
+        title: "Error",
+        description: "No game ID available. Please try refreshing.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    sendMessage({
+      type: "sync_all_players",
+      data: { gameId: gameState.gameId }
+    });
+
+    toast({
+      title: "Syncing Players",
+      description: "Sending current game state to all players...",
+    });
+  };
+
   const handleClearAllPlayers = async () => {
     if (!gameState.gameId) {
       toast({
@@ -770,6 +818,14 @@ export default function GameHost() {
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Reset Game
+                  </Button>
+                  <Button
+                    onClick={handleSyncAllPlayers}
+                    variant="outline"
+                    className="border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900"
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Sync All Players
                   </Button>
                   <Button
                     onClick={handleClearAllPlayers}
