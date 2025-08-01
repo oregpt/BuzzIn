@@ -67,18 +67,16 @@ export default function GamePlayer() {
     }
   }, [error, toast]);
 
-  const handleBuzz = () => {
-    if (!gameState?.currentQuestion || !playerId) return;
+  const handleSubmitAndBuzz = () => {
+    if (!gameState?.currentQuestion || !playerId || !answer.trim()) return;
     
+    // Send buzz first
     sendAction({
       type: "buzz",
       data: { questionId: gameState.currentQuestion.id }
     });
-  };
-
-  const handleSubmitAnswer = () => {
-    if (!gameState?.currentQuestion || !playerId || !answer.trim()) return;
     
+    // Then submit answer
     sendAction({
       type: "submit_answer",
       data: {
@@ -165,16 +163,26 @@ export default function GamePlayer() {
                 {gameState.currentQuestion.question}
               </div>
 
-              {/* Buzz Button */}
-              {!playerBuzz && timeRemaining > 0 && (
-                <Button
-                  onClick={handleBuzz}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-8 text-2xl"
-                  size="lg"
-                >
-                  <Hand className="mr-3 h-8 w-8" />
-                  BUZZ IN!
-                </Button>
+              {/* Answer Input and Submit/Buzz Button */}
+              {timeRemaining > 0 && !hasSubmitted && (
+                <div className="space-y-4">
+                  <Textarea
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder="Type your answer here..."
+                    className="bg-gray-700 border-gray-600 text-white text-lg"
+                    rows={4}
+                  />
+                  <Button
+                    onClick={handleSubmitAndBuzz}
+                    disabled={!answer.trim()}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-8 text-2xl"
+                    size="lg"
+                  >
+                    <Hand className="mr-3 h-8 w-8" />
+                    SUBMIT & BUZZ IN!
+                  </Button>
+                </div>
               )}
 
               {/* Buzz Status */}
@@ -186,26 +194,6 @@ export default function GamePlayer() {
                   {playerBuzz.isFirst && (
                     <p className="text-sm">You were first! Wait for the host to respond.</p>
                   )}
-                </div>
-              )}
-
-              {/* Answer Submission */}
-              {timeRemaining > 0 && !hasSubmitted && (
-                <div className="space-y-2">
-                  <Textarea
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Type your answer here..."
-                    className="bg-gray-700 border-gray-600 text-white"
-                    rows={3}
-                  />
-                  <Button
-                    onClick={handleSubmitAnswer}
-                    disabled={!answer.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    Submit Answer
-                  </Button>
                 </div>
               )}
 

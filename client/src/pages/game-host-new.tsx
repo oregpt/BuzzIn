@@ -338,86 +338,101 @@ export default function GameHost() {
         </CardContent>
       </Card>
 
-      {/* Current Question */}
-      {gameState.currentQuestion && showQuestion && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Question</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded relative">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-lg">{gameState.currentQuestion.category} - {formatCurrency(gameState.currentQuestion.value)}</h3>
-                <div className={`text-2xl font-bold px-3 py-1 rounded ${
-                  timeRemaining <= 5 ? 'bg-red-500 text-white' : 
-                  timeRemaining <= 10 ? 'bg-yellow-500 text-white' : 
-                  'bg-green-500 text-white'
-                }`}>
-                  {timeRemaining}s
+      {/* Current Question Modal */}
+      <Dialog open={!!gameState.currentQuestion && showQuestion} onOpenChange={() => {}}>
+        <DialogContent className="max-w-4xl bg-gray-800 border-gray-700 text-white">
+          <DialogHeader>
+            <div className="flex justify-between items-center">
+              <DialogTitle className="text-white text-xl">
+                {gameState.currentQuestion?.category} - {formatCurrency(gameState.currentQuestion?.value || 0)}
+              </DialogTitle>
+              <div className={`text-3xl font-bold px-4 py-2 rounded ${
+                timeRemaining <= 5 ? 'bg-red-500 text-white' : 
+                timeRemaining <= 10 ? 'bg-yellow-500 text-white' : 
+                'bg-green-500 text-white'
+              }`}>
+                {timeRemaining}s
+              </div>
+            </div>
+          </DialogHeader>
+          
+          {gameState.currentQuestion && (
+            <div className="space-y-6">
+              <div className="p-6 bg-blue-900 rounded text-xl text-white">
+                {gameState.currentQuestion.question}
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAnswer(!showAnswer)}
+                  className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                >
+                  {showAnswer ? "Hide Answer" : "Show Answer"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseQuestion}
+                  className="bg-red-700 border-red-600 text-white hover:bg-red-600"
+                >
+                  Close Question
+                </Button>
+              </div>
+
+              {showAnswer && (
+                <div className="p-4 bg-green-800 rounded">
+                  <h4 className="font-bold text-white">Correct Answer:</h4>
+                  <p className="text-green-100">{gameState.currentQuestion.correctAnswer}</p>
                 </div>
-              </div>
-              <p className="mt-2">{gameState.currentQuestion.question}</p>
-            </div>
+              )}
 
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => setShowAnswer(!showAnswer)}
-              >
-                {showAnswer ? "Hide Answer" : "Show Answer"}
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={handleCloseQuestion}
-              >
-                Close Question
-              </Button>
-            </div>
-
-            {showAnswer && (
-              <div className="p-4 bg-green-50 rounded">
-                <h4 className="font-bold">Correct Answer:</h4>
-                <p>{gameState.currentQuestion.correctAnswer}</p>
-              </div>
-            )}
-
-            {/* Buzzer Results */}
-            {gameState.buzzes && gameState.buzzes.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-bold">Buzz Order:</h4>
-                {gameState.buzzes.map((buzz, index) => (
-                  <div key={buzz.playerId} className="flex items-center justify-between p-2 border rounded">
-                    <span>#{buzz.buzzOrder} - {buzz.playerName}</span>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkAnswer(buzz.playerId, true)}
-                      >
-                        <Check className="h-4 w-4 text-green-600" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkAnswer(buzz.playerId, false)}
-                      >
-                        <X className="h-4 w-4 text-red-600" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkAnswer(buzz.playerId, null)}
-                      >
-                        Neutral
-                      </Button>
-                    </div>
+              {gameState.buzzes && gameState.buzzes.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-bold text-white">Buzz Order & Answers:</h4>
+                  <div className="grid gap-2">
+                    {gameState.buzzes.map((buzz, index) => (
+                      <div key={buzz.playerId} className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                        <div>
+                          <span className="font-medium text-white">#{buzz.buzzOrder} - {buzz.playerName}</span>
+                          {buzz.isFirst && <span className="ml-2 text-xs bg-yellow-500 px-2 py-1 rounded text-black">FIRST!</span>}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkAnswer(buzz.playerId, true)}
+                            className="bg-green-600 border-green-500 text-white hover:bg-green-500"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkAnswer(buzz.playerId, false)}
+                            className="bg-red-600 border-red-500 text-white hover:bg-red-500"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkAnswer(buzz.playerId, null)}
+                            className="bg-gray-600 border-gray-500 text-white hover:bg-gray-500"
+                          >
+                            Neutral
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                </div>
+              )}
+
+
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Players */}
       <Card>
