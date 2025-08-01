@@ -756,14 +756,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
             }
 
-            // Clear all non-host players
-            const success = await storage.clearAllPlayers(ws.gameId);
+            // Clear all non-host players using proper database deletion
+            await storage.clearNonHostPlayers(ws.gameId);
             
-            if (success) {
-              // Get remaining players (should only be host)
-              const remainingPlayers = await storage.getPlayersByGameId(ws.gameId);
-              
-              // Disconnect all non-host player websockets
+            // Get remaining players (should only be host)
+            const remainingPlayers = await storage.getPlayersByGameId(ws.gameId);
+            
+            // Disconnect all non-host player websockets
               const gamePlayerIds = gameConnections.get(ws.gameId);
               if (gamePlayerIds) {
                 // Create array of player IDs to remove (avoid concurrent modification)
@@ -796,15 +795,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               });
 
-              sendToPlayer(ws.playerId || '', {
-                type: "clear_players_success",
-                data: { message: "Players cleared successfully" }
+            sendToPlayer(ws.playerId || '', {
+              type: "clear_players_success", 
+              data: { message: "Players cleared successfully" }
+            });
+            break;
+          }
+
+          case 'remove_player': {
+            if (!ws.gameId) break;
+            
+            const { playerId } = message.data;
+            console.log('Processing remove_player:', { gameId: ws.gameId, playerId });
+            
+            try {
+              // Delete the specific player
+              await storage.deletePlayer(playerId);
+              
+              // Get updated player list
+              const updatedPlayers = await storage.getPlayersByGameId(ws.gameId);
+              
+              // Disconnect the removed player if they're connected
+              const removedPlayerWs = connections.get(playerId);
+              if (removedPlayerWs && removedPlayerWs.readyState === WebSocket.OPEN) {
+                removedPlayerWs.send(JSON.stringify({
+                  type: "player_removed",
+                  data: { message: "You have been removed from the game by the host" }
+                }));
+                removedPlayerWs.close();
+              }
+              connections.delete(playerId);
+              
+              // Remove from game connections
+              const gamePlayerIds = gameConnections.get(ws.gameId);
+              if (gamePlayerIds) {
+                gamePlayerIds.delete(playerId);
+              }
+              
+              // Broadcast the updated player list
+              broadcastToGame(ws.gameId, {
+                type: "player_removed",
+                data: { playerId, players: updatedPlayers }
               });
-            } else {
-              sendToPlayer(ws.playerId || '', {
+            } catch (error) {
+              console.error('Error removing player:', error);
+              ws.send(JSON.stringify({
                 type: "error",
-                data: { message: "Failed to clear players" }
-              });
+                data: { message: "Failed to remove player" }
+              }));
             }
             break;
           }

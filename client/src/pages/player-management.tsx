@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Copy, Plus, Users, Wifi, WifiOff } from "lucide-react";
+import { Copy, Plus, Users, Wifi, WifiOff, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { formatCurrency } from "@/lib/game-data";
@@ -39,6 +39,23 @@ export default function PlayerManagement({ players, roomCode, onClose }: PlayerM
     setShowCreatePlayer(false);
   });
 
+  // Handle player removal response
+  onMessage("player_removed", (data) => {
+    toast({
+      title: "Player Removed",
+      description: "Player has been successfully removed from the game",
+    });
+  });
+
+  // Handle players cleared response
+  onMessage("players_cleared", (data) => {
+    setCreatedPlayerCodes([]);
+    toast({
+      title: "All Players Cleared",
+      description: "All non-host players have been removed from the game",
+    });
+  });
+
   const handleCreatePlayer = () => {
     if (!newPlayerName.trim()) {
       toast({
@@ -60,6 +77,13 @@ export default function PlayerManagement({ players, roomCode, onClose }: PlayerM
     toast({
       title: "Copied!",
       description: `${label} copied to clipboard`,
+    });
+  };
+
+  const removePlayer = (playerId: string) => {
+    sendMessage({
+      type: "remove_player",
+      data: { playerId }
     });
   };
 
@@ -195,6 +219,14 @@ export default function PlayerManagement({ players, roomCode, onClose }: PlayerM
                             <Copy className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => removePlayer(player.id)}
+                          title="Remove Player"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
