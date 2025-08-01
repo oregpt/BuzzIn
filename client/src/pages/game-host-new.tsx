@@ -340,16 +340,16 @@ export default function GameHost() {
 
       {/* Current Question Modal */}
       <Dialog open={!!gameState.currentQuestion && showQuestion} onOpenChange={() => {}}>
-        <DialogContent className="max-w-4xl bg-gray-800 border-gray-700 text-white">
+        <DialogContent className="max-w-4xl bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 border-2 border-purple-400 text-white shadow-2xl">
           <DialogHeader>
             <div className="flex justify-between items-center">
-              <DialogTitle className="text-white text-xl">
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
                 {gameState.currentQuestion?.category} - {formatCurrency(gameState.currentQuestion?.value || 0)}
               </DialogTitle>
-              <div className={`text-3xl font-bold px-4 py-2 rounded ${
-                timeRemaining <= 5 ? 'bg-red-500 text-white' : 
-                timeRemaining <= 10 ? 'bg-yellow-500 text-white' : 
-                'bg-green-500 text-white'
+              <div className={`text-3xl font-bold px-4 py-2 rounded-lg shadow-lg ${
+                timeRemaining <= 5 ? 'bg-gradient-to-r from-red-500 to-red-700 text-white animate-pulse' : 
+                timeRemaining <= 10 ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white' : 
+                'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
               }`}>
                 {timeRemaining}s
               </div>
@@ -358,7 +358,7 @@ export default function GameHost() {
           
           {gameState.currentQuestion && (
             <div className="space-y-6">
-              <div className="p-6 bg-blue-900 rounded text-xl text-white">
+              <div className="p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg text-xl text-white shadow-lg border border-blue-400">
                 {gameState.currentQuestion.question}
               </div>
 
@@ -366,42 +366,42 @@ export default function GameHost() {
                 <Button
                   variant="outline"
                   onClick={() => setShowAnswer(!showAnswer)}
-                  className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                  className="bg-gradient-to-r from-emerald-600 to-green-600 border-emerald-400 text-white hover:from-emerald-500 hover:to-green-500 shadow-md"
                 >
                   {showAnswer ? "Hide Answer" : "Show Answer"}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleCloseQuestion}
-                  className="bg-red-700 border-red-600 text-white hover:bg-red-600"
+                  className="bg-gradient-to-r from-red-600 to-pink-600 border-red-400 text-white hover:from-red-500 hover:to-pink-500 shadow-md"
                 >
                   Close Question
                 </Button>
               </div>
 
               {showAnswer && (
-                <div className="p-4 bg-green-800 rounded">
-                  <h4 className="font-bold text-white">Correct Answer:</h4>
-                  <p className="text-green-100">{gameState.currentQuestion.correctAnswer}</p>
+                <div className="p-4 bg-gradient-to-r from-green-700 to-emerald-700 rounded-lg border border-green-400 shadow-lg">
+                  <h4 className="font-bold text-white text-lg">Correct Answer:</h4>
+                  <p className="text-green-100 text-lg">{gameState.currentQuestion.correctAnswer}</p>
                 </div>
               )}
 
               {gameState.buzzes && gameState.buzzes.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="font-bold text-white">Buzz Order & Answers:</h4>
-                  <div className="grid gap-2">
+                  <h4 className="font-bold text-white text-lg">Buzz Order & Answers:</h4>
+                  <div className="grid gap-3">
                     {gameState.buzzes.map((buzz, index) => (
-                      <div key={buzz.playerId} className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                      <div key={buzz.playerId} className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-700 to-purple-700 rounded-lg border border-indigo-400 shadow-md">
                         <div>
-                          <span className="font-medium text-white">#{buzz.buzzOrder} - {buzz.playerName}</span>
-                          {buzz.isFirst && <span className="ml-2 text-xs bg-yellow-500 px-2 py-1 rounded text-black">FIRST!</span>}
+                          <span className="font-medium text-white text-lg">#{buzz.buzzOrder} - {buzz.playerName}</span>
+                          {buzz.isFirst && <span className="ml-2 text-xs bg-gradient-to-r from-yellow-400 to-orange-400 px-3 py-1 rounded-full text-black font-bold shadow-sm">FIRST!</span>}
                         </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleMarkAnswer(buzz.playerId, true)}
-                            className="bg-green-600 border-green-500 text-white hover:bg-green-500"
+                            className="bg-gradient-to-r from-green-600 to-emerald-600 border-green-400 text-white hover:from-green-500 hover:to-emerald-500"
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -409,7 +409,7 @@ export default function GameHost() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleMarkAnswer(buzz.playerId, false)}
-                            className="bg-red-600 border-red-500 text-white hover:bg-red-500"
+                            className="bg-gradient-to-r from-red-600 to-pink-600 border-red-400 text-white hover:from-red-500 hover:to-pink-500"
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -417,7 +417,7 @@ export default function GameHost() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleMarkAnswer(buzz.playerId, null)}
-                            className="bg-gray-600 border-gray-500 text-white hover:bg-gray-500"
+                            className="bg-gradient-to-r from-gray-600 to-slate-600 border-gray-400 text-white hover:from-gray-500 hover:to-slate-500"
                           >
                             Neutral
                           </Button>

@@ -318,16 +318,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isConnected: false, // Not connected until they join
             });
 
+            // Update the cached game state
+            await gameStateManager.updateGameState(ws.gameId);
+            
+            // Get updated complete game state
+            const updatedGameState = await gameStateManager.getCompleteGameState(ws.gameId);
+
+            // Send player created response to host
             ws.send(JSON.stringify({
               type: "player_created",
               data: { player, playerCode }
             }));
 
-            // Broadcast to all players that a new player slot was created
-            broadcastToGame(ws.gameId, {
-              type: "player_joined",
-              data: { player }
-            });
+            // Broadcast the updated game state to all players
+            if (updatedGameState) {
+              broadcastToGame(ws.gameId, {
+                type: "game_state",
+                data: updatedGameState
+              });
+            }
             break;
           }
 
@@ -651,20 +660,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const success = await storage.resetGame(ws.gameId);
             
             if (success) {
-              // Get updated player data
-              const players = await storage.getPlayersByGameId(ws.gameId);
+              // Clear cached game state so it gets rebuilt
+              await gameStateManager.updateGameState(ws.gameId);
               
-              // Get updated questions
-              const questions = await storage.getQuestionsByGameId(ws.gameId);
+              // Get the updated complete game state
+              const updatedGameState = await gameStateManager.getCompleteGameState(ws.gameId);
               
-              // Broadcast reset notification to all players
-              broadcastToGame(ws.gameId, {
-                type: "game_reset",
-                data: { 
-                  players: players,
-                  questions: questions
-                }
-              });
+              if (updatedGameState) {
+                // Broadcast the complete game state
+                broadcastToGame(ws.gameId, {
+                  type: "game_state",
+                  data: updatedGameState
+                });
+              }
 
               sendToPlayer(ws.playerId || '', {
                 type: "reset_success",

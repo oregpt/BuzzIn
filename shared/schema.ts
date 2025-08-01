@@ -170,6 +170,8 @@ export type WSMessage =
   | { type: "update_question"; data: { questionId: string; question: string; correctAnswer: string; category: string; value: number; type: string; options?: string[] } }
   | { type: "delete_player"; data: { playerId: string } }
   | { type: "remove_player"; data: { playerId: string } }
+  | { type: "clear_players"; data: {} }
+  | { type: "refresh_me"; data: {} }
   | { type: "end_game"; data: {} };
   
 export type WSResponse = 
@@ -193,5 +195,9 @@ export type WSResponse =
   | { type: "game_reset"; data: CompleteGameState }
   | { type: "buzz_order_update"; data: { buzzes: Array<{ playerId: string; playerName: string; timestamp: number; buzzOrder: number; isFirst: boolean }> } }
   | { type: "players_cleared"; data: { players: Player[]; message: string } }
+  | { type: "player_removed"; data: { playerId?: string; players?: Player[]; message?: string } }
   | { type: "sync_complete"; data: { message: string } }
+  | { type: "reset_success"; data: { message: string } }
+  | { type: "clear_players_success"; data: { message: string } }
+  | { type: "full_sync"; data: { game: Game; questions: Question[]; players: Player[]; currentQuestion: Question | null; questionStartTime: number | null; categories: string[]; playerSpecific: { playerId: string; playerName: string; score: number; isHost: boolean } } }
   | { type: "error"; data: { message: string } };
