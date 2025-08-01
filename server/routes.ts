@@ -361,31 +361,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
           }
 
-            ws.playerId = player.id;
-            ws.gameId = game.id;
-            connections.set(player.id, ws);
-            
-            if (!gameConnections.has(game.id)) {
-              gameConnections.set(game.id, new Set());
-            }
-            gameConnections.get(game.id)!.add(player.id);
-
-            const allPlayers = await storage.getPlayersByGameId(game.id);
-
-            const joinResponse: WSResponse = {
-              type: "game_joined",
-              data: { playerId: player.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode }
-            };
-            console.log('Sending game_joined response to player:', player.id);
-            ws.send(JSON.stringify(joinResponse));
-
-            broadcastToGame(game.id, {
-              type: "player_joined",
-              data: { player }
-            });
-            break;
-          }
-
           case 'join_as_host': {
             const { roomCode, hostCode } = message.data;
             console.log('Join as host request:', { roomCode, hostCode });

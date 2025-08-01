@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
 import { Trophy, Users, Pause, Square, Check, X, Star, ArrowLeft, RotateCcw, Edit } from "lucide-react";
+import PlayerManagement from "./player-management";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,7 @@ export default function GameHost() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showScores, setShowScores] = useState(false);
   const [showEditQuestions, setShowEditQuestions] = useState(false);
+  const [showPlayerManagement, setShowPlayerManagement] = useState(false);
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [editForm, setEditForm] = useState<{
@@ -710,6 +712,14 @@ export default function GameHost() {
                     View Scores
                   </Button>
                   <Button
+                    onClick={() => setShowPlayerManagement(true)}
+                    variant="outline"
+                    className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900"
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Manage Players
+                  </Button>
+                  <Button
                     onClick={handleEditQuestions}
                     variant="outline"
                     className="border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900"
@@ -1137,6 +1147,15 @@ export default function GameHost() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Player Management Dialog */}
+      {showPlayerManagement && (
+        <PlayerManagement
+          players={gameState.players}
+          roomCode={gameState.roomCode}
+          onClose={() => setShowPlayerManagement(false)}
+        />
+      )}
 
       {/* Current Scores Dialog */}
       <Dialog open={showScores} onOpenChange={setShowScores}>
