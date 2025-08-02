@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
-import { Hand, Users, ArrowLeft } from "lucide-react";
+import { Hand, Users, ArrowLeft, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useGameState } from "@/hooks/use-game-state";
 import { formatCurrency } from "@/lib/game-data";
@@ -89,6 +89,28 @@ export default function GamePlayer() {
     setHasSubmitted(true);
   };
 
+  const handleRefresh = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameIdParam = urlParams.get('game');
+    
+    if (gameIdParam) {
+      try {
+        await refreshGameState(gameIdParam);
+        toast({
+          title: "Refreshed!",
+          description: "Game state updated successfully."
+        });
+      } catch (error) {
+        console.error('Error refreshing game state:', error);
+        toast({
+          title: "Error",
+          description: "Failed to refresh game state.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -135,10 +157,16 @@ export default function GamePlayer() {
             <h1 className="text-2xl font-bold">{currentPlayer.name}</h1>
             <p className="text-blue-200">Room: {gameState.roomCode} | Score: {formatCurrency(currentPlayer.score)}</p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Exit
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Exit
+            </Button>
+          </div>
         </div>
 
         {/* Current Question */}
