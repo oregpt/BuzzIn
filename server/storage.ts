@@ -710,6 +710,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(gameAnswers).where(eq(gameAnswers.questionId, questionId));
   }
 
+  async updateGameAnswer(id: string, updates: Partial<GameAnswer>): Promise<GameAnswer | undefined> {
+    const [answer] = await db.update(gameAnswers).set(updates).where(eq(gameAnswers.id, id)).returning();
+    return answer || undefined;
+  }
+
   // Utility methods
   async generateRoomCode(): Promise<string> {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
