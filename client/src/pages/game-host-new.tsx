@@ -465,9 +465,13 @@ export default function GameHost() {
                                   clickedButtons[buzz.playerId] === 'correct' 
                                     ? 'bg-gradient-to-r from-green-400 to-emerald-400 border-green-300 text-black shadow-lg scale-95' 
                                     : 'bg-gradient-to-r from-green-600 to-emerald-600 border-green-400 text-white hover:from-green-500 hover:to-emerald-500'
-                                } transition-all duration-200`}
+                                } transition-all duration-200 min-w-[80px]`}
                               >
-                                <Check className="h-4 w-4" />
+                                {clickedButtons[buzz.playerId] === 'correct' ? (
+                                  <span className="text-xs font-bold">Score!</span>
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
                               </Button>
                               <Button
                                 size="sm"
@@ -477,9 +481,13 @@ export default function GameHost() {
                                   clickedButtons[buzz.playerId] === 'incorrect' 
                                     ? 'bg-gradient-to-r from-red-400 to-pink-400 border-red-300 text-black shadow-lg scale-95' 
                                     : 'bg-gradient-to-r from-red-600 to-pink-600 border-red-400 text-white hover:from-red-500 hover:to-pink-500'
-                                } transition-all duration-200`}
+                                } transition-all duration-200 min-w-[80px]`}
                               >
-                                <X className="h-4 w-4" />
+                                {clickedButtons[buzz.playerId] === 'incorrect' ? (
+                                  <span className="text-xs font-bold">Loss!</span>
+                                ) : (
+                                  <X className="h-4 w-4" />
+                                )}
                               </Button>
                               <Button
                                 size="sm"
@@ -489,9 +497,13 @@ export default function GameHost() {
                                   clickedButtons[buzz.playerId] === 'neutral' 
                                     ? 'bg-gradient-to-r from-gray-400 to-slate-400 border-gray-300 text-black shadow-lg scale-95' 
                                     : 'bg-gradient-to-r from-gray-600 to-slate-600 border-gray-400 text-white hover:from-gray-500 hover:to-slate-500'
-                                } transition-all duration-200`}
+                                } transition-all duration-200 min-w-[80px]`}
                               >
-                                Neutral
+                                {clickedButtons[buzz.playerId] === 'neutral' ? (
+                                  <span className="text-xs font-bold">None</span>
+                                ) : (
+                                  'Neutral'
+                                )}
                               </Button>
                             </div>
                           </div>
