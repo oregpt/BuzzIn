@@ -158,11 +158,19 @@ export default function GamePlayer() {
             <p className="text-blue-200">Room: {gameState.roomCode} | Score: {formatCurrency(currentPlayer.score)}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleRefresh}>
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              className="text-black border-black hover:bg-black hover:text-white"
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
-            <Button variant="outline" onClick={() => navigate('/')}>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="text-black border-black hover:bg-black hover:text-white"
+            >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Exit
             </Button>

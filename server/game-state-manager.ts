@@ -207,19 +207,44 @@ export class GameStateManager {
       }
     }
 
-    // Create game answer record
-    const gameAnswer = await this.storage.createGameAnswer({
-      gameId,
-      playerId,
-      questionId: state.currentQuestion.id,
-      answer: '', // We don't track the actual answer text in this flow
-      isCorrect,
-      pointsAwarded: scoreChange,
-      submissionOrder: 1,
-      submissionTime: state.questionStartTime ? (Date.now() - state.questionStartTime) / 1000 : 0
-    });
-
-    state.answers.push(gameAnswer);
+    // Update existing answer instead of creating new one
+    const existingAnswers = await this.storage.getAnswersByQuestion(state.currentQuestion.id);
+    const existingAnswer = existingAnswers.find(a => a.playerId === playerId);
+    
+    if (existingAnswer) {
+      // Update the existing answer with scoring
+      await this.storage.updateGameAnswer(existingAnswer.id, {
+        isCorrect,
+        pointsAwarded: scoreChange
+      });
+      
+      // Update in state
+      const answerIndex = state.answers.findIndex(a => a.playerId === playerId && a.questionId === state.currentQuestion!.id);
+      if (answerIndex >= 0) {
+        state.answers[answerIndex].isCorrect = isCorrect;
+        state.answers[answerIndex].pointsAwarded = scoreChange;
+      } else {
+        // Add to state if not already there
+        state.answers.push({
+          ...existingAnswer,
+          isCorrect,
+          pointsAwarded: scoreChange
+        });
+      }
+    } else {
+      // Create new answer record only if none exists (fallback)
+      const gameAnswer = await this.storage.createGameAnswer({
+        gameId,
+        playerId,
+        questionId: state.currentQuestion.id,
+        answer: '', 
+        isCorrect,
+        pointsAwarded: scoreChange,
+        submissionOrder: 1,
+        submissionTime: state.questionStartTime ? (Date.now() - state.questionStartTime) / 1000 : 0
+      });
+      state.answers.push(gameAnswer);
+    }
     state.questionState = 'answering';
 
     this.gameStates.set(gameId, state);

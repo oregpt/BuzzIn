@@ -44,6 +44,7 @@ export interface IStorage {
   createGameAnswer(answer: InsertGameAnswer): Promise<GameAnswer>;
   getGameAnswersByQuestion(questionId: string): Promise<GameAnswer[]>;
   getAnswersByQuestion(questionId: string): Promise<GameAnswer[]>;
+  updateGameAnswer(id: string, updates: Partial<GameAnswer>): Promise<GameAnswer | undefined>;
 
   // Utility methods
   generateRoomCode(): Promise<string>;
@@ -348,6 +349,8 @@ export class MemStorage implements IStorage {
       answer: insertAnswer.answer,
       isCorrect: insertAnswer.isCorrect || null,
       pointsAwarded: insertAnswer.pointsAwarded || 0,
+      submissionOrder: insertAnswer.submissionOrder || null,
+      submissionTime: insertAnswer.submissionTime || null,
       submittedAt: new Date(),
     };
     this.gameAnswers.set(id, answer);
@@ -356,6 +359,77 @@ export class MemStorage implements IStorage {
 
   async getGameAnswersByQuestion(questionId: string): Promise<GameAnswer[]> {
     return Array.from(this.gameAnswers.values()).filter(answer => answer.questionId === questionId);
+  }
+
+  async getAnswersByQuestion(questionId: string): Promise<GameAnswer[]> {
+    return this.getGameAnswersByQuestion(questionId);
+  }
+
+  async updateGameAnswer(id: string, updates: Partial<GameAnswer>): Promise<GameAnswer | undefined> {
+    const answer = this.gameAnswers.get(id);
+    if (!answer) return undefined;
+    
+    const updatedAnswer = { ...answer, ...updates };
+    this.gameAnswers.set(id, updatedAnswer);
+    return updatedAnswer;
+  }
+
+  async resetGame(gameId: string): Promise<boolean> {
+    // Reset all players' scores in this game
+    Array.from(this.players.values())
+      .filter(p => p.gameId === gameId)
+      .forEach(p => {
+        p.score = 0;
+        this.players.set(p.id, p);
+      });
+
+    // Reset all questions to unused
+    Array.from(this.questions.values())
+      .filter(q => q.gameId === gameId)
+      .forEach(q => {
+        q.isUsed = false;
+        this.questions.set(q.id, q);
+      });
+
+    // Clear buzzes and answers for this game
+    const buzzesToDelete: string[] = [];
+    this.buzzes.forEach((buzz, id) => {
+      if (buzz.gameId === gameId) {
+        buzzesToDelete.push(id);
+      }
+    });
+    buzzesToDelete.forEach(id => this.buzzes.delete(id));
+
+    const answersToDelete: string[] = [];
+    this.gameAnswers.forEach((answer, id) => {
+      if (answer.gameId === gameId) {
+        answersToDelete.push(id);
+      }
+    });
+    answersToDelete.forEach(id => this.gameAnswers.delete(id));
+
+    return true;
+  }
+
+  async clearAllPlayers(gameId: string): Promise<boolean> {
+    const playersToDelete: string[] = [];
+    this.players.forEach((player, id) => {
+      if (player.gameId === gameId) {
+        playersToDelete.push(id);
+      }
+    });
+    playersToDelete.forEach(id => this.players.delete(id));
+    return true;
+  }
+
+  async clearNonHostPlayers(gameId: string): Promise<void> {
+    const playersToDelete: string[] = [];
+    this.players.forEach((player, id) => {
+      if (player.gameId === gameId && !player.isHost) {
+        playersToDelete.push(id);
+      }
+    });
+    playersToDelete.forEach(id => this.players.delete(id));
   }
 }
 

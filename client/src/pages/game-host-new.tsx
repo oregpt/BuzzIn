@@ -24,6 +24,7 @@ export default function GameHost() {
   const [showEditQuestion, setShowEditQuestion] = useState(false);
   const [showQuestionConfirm, setShowQuestionConfirm] = useState(false);
   const [showAllAnswers, setShowAllAnswers] = useState(false);
+  const [clickedButtons, setClickedButtons] = useState<{[key: string]: 'correct' | 'incorrect' | 'neutral'}>({});
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [questionToSelect, setQuestionToSelect] = useState<{category: string, value: number} | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
@@ -88,10 +89,12 @@ export default function GameHost() {
     if (gameState?.currentQuestion) {
       setShowQuestion(true);
       setTimeRemaining(30); // 30 second timer as requested
+      setClickedButtons({}); // Reset clicked button states for new question
     } else {
       setShowQuestion(false);
       setShowAnswer(false);
       setTimeRemaining(0);
+      setClickedButtons({}); // Reset clicked button states when no question
     }
   }, [gameState?.currentQuestion]);
 
@@ -148,6 +151,13 @@ export default function GameHost() {
   };
 
   const handleMarkAnswer = (playerId: string, isCorrect: boolean | null) => {
+    // Track which button was clicked
+    const buttonType = isCorrect === true ? 'correct' : isCorrect === false ? 'incorrect' : 'neutral';
+    setClickedButtons(prev => ({
+      ...prev,
+      [playerId]: buttonType
+    }));
+
     sendAction({
       type: "mark_answer",
       data: { playerId, isCorrect }
@@ -340,7 +350,11 @@ export default function GameHost() {
       </Card>
 
       {/* Current Question Modal */}
-      <Dialog open={!!gameState.currentQuestion && showQuestion} onOpenChange={() => {}}>
+      <Dialog open={!!gameState.currentQuestion && showQuestion} onOpenChange={(open) => {
+        if (!open) {
+          setShowQuestion(false);
+        }
+      }}>
         <DialogContent className="max-w-4xl bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 border-2 border-purple-400 text-white shadow-2xl">
           <DialogHeader>
             <div className="flex justify-between items-center">
@@ -447,7 +461,11 @@ export default function GameHost() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleMarkAnswer(buzz.playerId, true)}
-                                className="bg-gradient-to-r from-green-600 to-emerald-600 border-green-400 text-white hover:from-green-500 hover:to-emerald-500"
+                                className={`${
+                                  clickedButtons[buzz.playerId] === 'correct' 
+                                    ? 'bg-gradient-to-r from-green-400 to-emerald-400 border-green-300 text-black shadow-lg scale-95' 
+                                    : 'bg-gradient-to-r from-green-600 to-emerald-600 border-green-400 text-white hover:from-green-500 hover:to-emerald-500'
+                                } transition-all duration-200`}
                               >
                                 <Check className="h-4 w-4" />
                               </Button>
@@ -455,7 +473,11 @@ export default function GameHost() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleMarkAnswer(buzz.playerId, false)}
-                                className="bg-gradient-to-r from-red-600 to-pink-600 border-red-400 text-white hover:from-red-500 hover:to-pink-500"
+                                className={`${
+                                  clickedButtons[buzz.playerId] === 'incorrect' 
+                                    ? 'bg-gradient-to-r from-red-400 to-pink-400 border-red-300 text-black shadow-lg scale-95' 
+                                    : 'bg-gradient-to-r from-red-600 to-pink-600 border-red-400 text-white hover:from-red-500 hover:to-pink-500'
+                                } transition-all duration-200`}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -463,7 +485,11 @@ export default function GameHost() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleMarkAnswer(buzz.playerId, null)}
-                                className="bg-gradient-to-r from-gray-600 to-slate-600 border-gray-400 text-white hover:from-gray-500 hover:to-slate-500"
+                                className={`${
+                                  clickedButtons[buzz.playerId] === 'neutral' 
+                                    ? 'bg-gradient-to-r from-gray-400 to-slate-400 border-gray-300 text-black shadow-lg scale-95' 
+                                    : 'bg-gradient-to-r from-gray-600 to-slate-600 border-gray-400 text-white hover:from-gray-500 hover:to-slate-500'
+                                } transition-all duration-200`}
                               >
                                 Neutral
                               </Button>
