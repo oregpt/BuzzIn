@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
-import { Trophy, Users, Check, X, Star, ArrowLeft, RotateCcw, Settings, Edit, Trash2, UserPlus, Copy } from "lucide-react";
+import { Trophy, Users, Check, X, Star, ArrowLeft, RotateCcw, Settings, Edit, Trash2, UserPlus, Copy, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useGameState } from "@/hooks/use-game-state";
 import { formatCurrency } from "@/lib/game-data";
@@ -23,6 +23,7 @@ export default function GameHost() {
   const [showPlayerDialog, setShowPlayerDialog] = useState(false);
   const [showEditQuestion, setShowEditQuestion] = useState(false);
   const [showQuestionConfirm, setShowQuestionConfirm] = useState(false);
+  const [showAllAnswers, setShowAllAnswers] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [questionToSelect, setQuestionToSelect] = useState<{category: string, value: number} | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
@@ -415,42 +416,73 @@ export default function GameHost() {
 
               {gameState.buzzes && gameState.buzzes.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="font-bold text-white text-lg">Buzz Order & Answers:</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-white text-lg">Buzz Order & Answers:</h4>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAllAnswers(!showAllAnswers)}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-400 text-white hover:from-blue-500 hover:to-indigo-500"
+                    >
+                      {showAllAnswers ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                      {showAllAnswers ? 'Hide Answers' : 'Show Answers'}
+                    </Button>
+                  </div>
                   <div className="grid gap-3">
-                    {gameState.buzzes.map((buzz, index) => (
-                      <div key={buzz.playerId} className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-700 to-purple-700 rounded-lg border border-indigo-400 shadow-md">
-                        <div>
-                          <span className="font-medium text-white text-lg">#{buzz.buzzOrder} - {buzz.playerName}</span>
-                          {buzz.isFirst && <span className="ml-2 text-xs bg-gradient-to-r from-yellow-400 to-orange-400 px-3 py-1 rounded-full text-black font-bold shadow-sm">FIRST!</span>}
+                    {gameState.buzzes.map((buzz, index) => {
+                      // Find the submitted answer for this buzz
+                      const submittedAnswer = gameState.answers?.find(answer => 
+                        answer.playerId === buzz.playerId && 
+                        answer.questionId === buzz.questionId
+                      );
+                      
+                      return (
+                        <div key={buzz.playerId} className="p-4 bg-gradient-to-r from-indigo-700 to-purple-700 rounded-lg border border-indigo-400 shadow-md">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <span className="font-medium text-white text-lg">#{buzz.buzzOrder} - {buzz.playerName}</span>
+                              {buzz.isFirst && <span className="ml-2 text-xs bg-gradient-to-r from-yellow-400 to-orange-400 px-3 py-1 rounded-full text-black font-bold shadow-sm">FIRST!</span>}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMarkAnswer(buzz.playerId, true)}
+                                className="bg-gradient-to-r from-green-600 to-emerald-600 border-green-400 text-white hover:from-green-500 hover:to-emerald-500"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMarkAnswer(buzz.playerId, false)}
+                                className="bg-gradient-to-r from-red-600 to-pink-600 border-red-400 text-white hover:from-red-500 hover:to-pink-500"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMarkAnswer(buzz.playerId, null)}
+                                className="bg-gradient-to-r from-gray-600 to-slate-600 border-gray-400 text-white hover:from-gray-500 hover:to-slate-500"
+                              >
+                                Neutral
+                              </Button>
+                            </div>
+                          </div>
+                          {showAllAnswers && submittedAnswer && (
+                            <div className="mt-3 p-3 bg-black/20 rounded border-l-4 border-blue-400">
+                              <div className="text-sm text-blue-200 mb-1">Answer:</div>
+                              <div className="text-white font-medium">{submittedAnswer.answer}</div>
+                            </div>
+                          )}
+                          {showAllAnswers && !submittedAnswer && (
+                            <div className="mt-3 p-3 bg-black/20 rounded border-l-4 border-gray-400">
+                              <div className="text-sm text-gray-300 italic">No answer submitted</div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMarkAnswer(buzz.playerId, true)}
-                            className="bg-gradient-to-r from-green-600 to-emerald-600 border-green-400 text-white hover:from-green-500 hover:to-emerald-500"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMarkAnswer(buzz.playerId, false)}
-                            className="bg-gradient-to-r from-red-600 to-pink-600 border-red-400 text-white hover:from-red-500 hover:to-pink-500"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMarkAnswer(buzz.playerId, null)}
-                            className="bg-gradient-to-r from-gray-600 to-slate-600 border-gray-400 text-white hover:from-gray-500 hover:to-slate-500"
-                          >
-                            Neutral
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
