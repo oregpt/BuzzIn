@@ -1,4 +1,4 @@
-# Bu's Birthday Jeopardy Game
+Trivia Game
 
 A multiplayer Jeopardy-style trivia game built with React, Express.js, and WebSocket for real-time communication.
 
