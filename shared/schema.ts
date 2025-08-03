@@ -19,6 +19,11 @@ export const games = pgTable("games", {
   currentQuestionId: varchar("current_question_id"),
   lastCorrectPlayerId: varchar("last_correct_player_id"), // Who gets to pick next
   hostCode: varchar("host_code", { length: 6 }).notNull(), // Host authentication code
+  
+  // Privacy fields
+  personalPasscode: text("personal_passcode"), // Protects all host's games (optional)
+  publicPasscode: text("public_passcode"), // Protects this specific game (optional)
+  isPrivate: boolean("is_private").notNull().default(false), // If true, game won't appear in public list
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

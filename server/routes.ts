@@ -98,6 +98,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status: "waiting",
               currentQuestionId: null,
               hostCode,
+              personalPasscode: null,
+              publicPasscode: null,
+              isPrivate: false,
             });
             console.log('Created game:', game);
 
@@ -391,7 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const joinResponse: WSResponse = {
               type: "game_joined",
-              data: { playerId: hostPlayer.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode, categories: game.categories }
+              data: { playerId: hostPlayer.id, gameId: game.id, players: allPlayers, roomCode: game.roomCode, categories: game.categories as string[] }
             };
             console.log('Sending game_joined response to host:', hostPlayer.id);
             ws.send(JSON.stringify(joinResponse));
@@ -465,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 game,
                 questions,
                 players: allPlayers,
-                currentQuestion,
+                currentQuestion: currentQuestion || null,
                 questionStartTime,
                 categories: (game.categories as string[]) || [],
                 playerSpecific: {
@@ -571,9 +574,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     playerId: answer.playerId,
                     playerName: answerPlayer!.name,
                     answer: answer.answer,
-                    submissionOrder: answer.submissionOrder,
-                    submissionTime: answer.submissionTime,
-                    isCorrect: null, // Host will decide
+                    submissionOrder: answer.submissionOrder || 0,
+                    submissionTime: answer.submissionTime || 0,
+                    isCorrect: undefined, // Host will decide
                     pointsAwarded: 0  // Host will decide
                   };
                 })
@@ -913,6 +916,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error clearing players:', error);
       res.status(500).json({ error: 'Failed to clear players' });
+    }
+  });
+
+  // Privacy API Routes
+  
+  // Join game by public passcode
+  app.post('/api/games/join-by-passcode', async (req, res) => {
+    try {
+      const { publicPasscode } = req.body;
+      
+      if (!publicPasscode) {
+        return res.status(400).json({ error: 'Public passcode is required' });
+      }
+
+      const game = await storage.getGameByPublicPasscode(publicPasscode);
+      
+      if (!game) {
+        return res.status(404).json({ error: 'Game not found with this passcode' });
+      }
+
+      const players = await storage.getPlayersByGameId(game.id);
+      
+      res.json({
+        ...game,
+        playerCount: players.length
+      });
+    } catch (error) {
+      console.error('Error joining by passcode:', error);
+      res.status(500).json({ error: 'Failed to find game' });
+    }
+  });
+
+  // Get host games by personal passcode
+  app.post('/api/games/host-games', async (req, res) => {
+    try {
+      const { personalPasscode } = req.body;
+      
+      if (!personalPasscode) {
+        return res.status(400).json({ error: 'Personal passcode is required' });
+      }
+
+      const games = await storage.getHostGames(personalPasscode);
+      
+      // Include player count for each game
+      const gamesWithPlayerCounts = await Promise.all(
+        games.map(async (game) => {
+          const players = await storage.getPlayersByGameId(game.id);
+          return {
+            ...game,
+            playerCount: players.length
+          };
+        })
+      );
+      
+      res.json(gamesWithPlayerCounts);
+    } catch (error) {
+      console.error('Error fetching host games:', error);
+      res.status(500).json({ error: 'Failed to fetch host games' });
+    }
+  });
+
+  // Update game privacy settings
+  app.patch('/api/games/:gameId/privacy', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const { personalPasscode, publicPasscode, isPrivate } = req.body;
+
+      const updateData: Partial<Game> = {};
+      
+      if (personalPasscode !== undefined) updateData.personalPasscode = personalPasscode;
+      if (publicPasscode !== undefined) updateData.publicPasscode = publicPasscode;  
+      if (isPrivate !== undefined) updateData.isPrivate = isPrivate;
+
+      const updatedGame = await storage.updateGame(gameId, updateData);
+      
+      if (!updatedGame) {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+
+      res.json(updatedGame);
+    } catch (error) {
+      console.error('Error updating game privacy:', error);
+      res.status(500).json({ error: 'Failed to update game privacy' });
     }
   });
 

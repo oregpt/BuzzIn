@@ -16,9 +16,11 @@ export interface IStorage {
   createGame(game: InsertGame): Promise<Game>;
   getGame(id: string): Promise<Game | undefined>;
   getGameByRoomCode(roomCode: string): Promise<Game | undefined>;
+  getGameByPublicPasscode(publicPasscode: string): Promise<Game | undefined>;
   updateGame(id: string, updates: Partial<Game>): Promise<Game | undefined>;
   deleteGame(id: string): Promise<boolean>;
   getOpenGames(): Promise<Game[]>;
+  getHostGames(personalPasscode: string): Promise<Game[]>;
 
   // Player methods
   createPlayer(player: InsertPlayer): Promise<Player>;
@@ -174,6 +176,11 @@ export class MemStorage implements IStorage {
       currentQuestionId: insertGame.currentQuestionId || null,
       lastCorrectPlayerId: null,
       hostCode: insertGame.hostCode || this.generateAuthCode(),
+      
+      // Privacy fields
+      personalPasscode: insertGame.personalPasscode || null,
+      publicPasscode: insertGame.publicPasscode || null,
+      isPrivate: insertGame.isPrivate || false,
 
       createdAt: new Date(),
     };
@@ -187,6 +194,14 @@ export class MemStorage implements IStorage {
 
   async getGameByRoomCode(roomCode: string): Promise<Game | undefined> {
     return Array.from(this.games.values()).find(game => game.roomCode === roomCode);
+  }
+
+  async getGameByPublicPasscode(publicPasscode: string): Promise<Game | undefined> {
+    return Array.from(this.games.values()).find(game => game.publicPasscode === publicPasscode);
+  }
+
+  async getHostGames(personalPasscode: string): Promise<Game[]> {
+    return Array.from(this.games.values()).filter(game => game.personalPasscode === personalPasscode);
   }
 
   async updateGame(id: string, updates: Partial<Game>): Promise<Game | undefined> {
@@ -203,7 +218,9 @@ export class MemStorage implements IStorage {
   }
 
   async getOpenGames(): Promise<Game[]> {
-    return Array.from(this.games.values()).filter(game => game.status === "waiting" || game.status === "active");
+    return Array.from(this.games.values()).filter(game => 
+      (game.status === "waiting" || game.status === "active") && !game.isPrivate
+    );
   }
 
   async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
@@ -462,7 +479,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOpenGames(): Promise<Game[]> {
-    return await db.select().from(games).where(or(eq(games.status, "waiting"), eq(games.status, "active")));
+    return await db.select().from(games).where(
+      and(
+        or(eq(games.status, "waiting"), eq(games.status, "active")),
+        eq(games.isPrivate, false)
+      )
+    );
+  }
+
+  async getGameByPublicPasscode(publicPasscode: string): Promise<Game | undefined> {
+    const [game] = await db.select().from(games).where(eq(games.publicPasscode, publicPasscode));
+    return game || undefined;
+  }
+
+  async getHostGames(personalPasscode: string): Promise<Game[]> {
+    return await db.select().from(games).where(eq(games.personalPasscode, personalPasscode));
   }
 
   // Player methods

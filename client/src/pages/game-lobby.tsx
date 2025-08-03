@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useLocation } from "wouter";
-import { Gamepad, Users, LogIn, Calendar, Clock, Crown, X } from "lucide-react";
+import { Gamepad, Users, LogIn, Calendar, Clock, Crown, X, Lock, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +22,49 @@ export default function GameLobby() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Privacy mutations
+  const updatePrivacyMutation = useMutation({
+    mutationFn: ({ gameId, privacy }: { gameId: string; privacy: any }) => 
+      apiRequest('PATCH', `/api/games/${gameId}/privacy`, privacy),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/open-games'] });
+      toast({
+        title: "Privacy Updated",
+        description: "Game privacy settings have been updated.",
+      });
+      setShowPrivacyDialog(false);
+      setGameForPrivacy(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update privacy",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const joinByPasscodeMutation = useMutation({
+    mutationFn: async (publicPasscode: string): Promise<GameWithPlayerCount> => {
+      const response = await apiRequest('POST', '/api/games/join-by-passcode', { publicPasscode });
+      return response as GameWithPlayerCount;
+    },
+    onSuccess: (game: GameWithPlayerCount) => {
+      setSelectedGame(game);
+      setJoinType('player');
+      setShowPasscodeDialog(false);
+      setJoinPasscode('');
+      setShowJoinDialog(true);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Game not found with this passcode",
+        variant: "destructive",
+      });
+    },
+  });
+
   const [joinForm, setJoinForm] = useState({
     roomCode: "",
     playerName: "",
@@ -35,6 +78,18 @@ export default function GameLobby() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [gameToDelete, setGameToDelete] = useState<GameWithPlayerCount | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
+
+  // Privacy state
+  const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
+  const [gameForPrivacy, setGameForPrivacy] = useState<GameWithPlayerCount | null>(null);
+  const [privacyForm, setPrivacyForm] = useState({
+    personalPasscode: '',
+    publicPasscode: '',
+  });
+
+  // Join by passcode state  
+  const [showPasscodeDialog, setShowPasscodeDialog] = useState(false);
+  const [joinPasscode, setJoinPasscode] = useState('');
 
   // Fetch open games
   const { data: openGames = [], isLoading: isLoadingGames, refetch: refetchGames } = useQuery<GameWithPlayerCount[]>({
@@ -89,6 +144,40 @@ export default function GameLobby() {
   const handleSetupGame = () => {
     // Direct navigation to setup - no form needed
     navigate("/setup");
+  };
+
+  const handlePrivacySettings = (game: GameWithPlayerCount) => {
+    setGameForPrivacy(game);
+    setPrivacyForm({
+      personalPasscode: game.personalPasscode || '',
+      publicPasscode: game.publicPasscode || '',
+    });
+    setShowPrivacyDialog(true);
+  };
+
+  const handlePrivacySubmit = () => {
+    if (!gameForPrivacy) return;
+
+    const privacy = {
+      personalPasscode: privacyForm.personalPasscode || null,
+      publicPasscode: privacyForm.publicPasscode || null,
+      isPrivate: !!(privacyForm.personalPasscode || privacyForm.publicPasscode),
+    };
+
+    updatePrivacyMutation.mutate({ gameId: gameForPrivacy.id, privacy });
+  };
+
+  const handleJoinByPasscode = () => {
+    if (!joinPasscode.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a public passcode",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    joinByPasscodeMutation.mutate(joinPasscode.trim());
   };
 
 
@@ -224,6 +313,18 @@ export default function GameLobby() {
           </Card>
         </div>
 
+        {/* Join by Passcode Button */}
+        <div className="max-w-md mx-auto mb-8">
+          <Button
+            onClick={() => setShowPasscodeDialog(true)}
+            variant="outline"
+            className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-black dark:text-white"
+          >
+            <Key className="mr-2 w-4 h-4" />
+            Join Private Game
+          </Button>
+        </div>
+
         {/* Open Games Section */}
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-black dark:text-white mb-6 text-center">Open Games</h2>
@@ -300,13 +401,27 @@ export default function GameLobby() {
                         {new Date(game.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
-                    <Button
-                      onClick={() => handleJoinOpenGame(game)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4"
-                    >
-                      <LogIn className="mr-2 w-4 h-4" />
-                      Join Game
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleJoinOpenGame(game)}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4"
+                      >
+                        <LogIn className="mr-2 w-4 h-4" />
+                        Join Game
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePrivacySettings(game);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="px-3 py-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        title="Privacy Settings"
+                      >
+                        <Lock className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -450,6 +565,119 @@ export default function GameLobby() {
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {deleteGameMutation.isPending ? 'Deleting...' : 'Delete Game'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Privacy Settings Dialog */}
+      <Dialog open={showPrivacyDialog} onOpenChange={setShowPrivacyDialog}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-white text-xl">Privacy Settings</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Game: {gameForPrivacy?.gameName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <h4 className="font-medium text-white mb-2">How Privacy Works</h4>
+              <ul className="text-sm text-gray-300 space-y-1">
+                <li>• <strong>Personal Passcode:</strong> Protects ALL your games (like a password)</li>
+                <li>• <strong>Public Passcode:</strong> For players to join this specific game (make it easy to share)</li>
+                <li>• Games with any passcode won't appear in the public list</li>
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-white">Personal Passcode (Optional)</Label>
+                <Input
+                  type="password"
+                  placeholder="Secure password for all your games"
+                  value={privacyForm.personalPasscode}
+                  onChange={(e) => setPrivacyForm(prev => ({ ...prev, personalPasscode: e.target.value }))}
+                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                />
+                <p className="text-xs text-gray-400 mt-1">Keep this secure - it protects all your games</p>
+              </div>
+
+              <div>
+                <Label className="text-white">Public Passcode (Optional)</Label>
+                <Input
+                  type="text"
+                  placeholder="Easy code for players to join (e.g. 'party123')"
+                  value={privacyForm.publicPasscode}
+                  onChange={(e) => setPrivacyForm(prev => ({ ...prev, publicPasscode: e.target.value }))}
+                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                />
+                <p className="text-xs text-gray-400 mt-1">Make this easy to share with players</p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => setShowPrivacyDialog(false)}
+              variant="outline"
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePrivacySubmit}
+              disabled={updatePrivacyMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {updatePrivacyMutation.isPending ? 'Updating...' : 'Update Privacy'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join by Passcode Dialog */}
+      <Dialog open={showPasscodeDialog} onOpenChange={setShowPasscodeDialog}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white text-xl">Join Private Game</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Enter the public passcode shared by the host
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label className="text-white">Public Passcode</Label>
+              <Input
+                type="text"
+                placeholder="Enter passcode (e.g. 'party123')"
+                value={joinPasscode}
+                onChange={(e) => setJoinPasscode(e.target.value)}
+                className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleJoinByPasscode();
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => setShowPasscodeDialog(false)}
+              variant="outline"
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleJoinByPasscode}
+              disabled={joinByPasscodeMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {joinByPasscodeMutation.isPending ? 'Searching...' : 'Find Game'}
             </Button>
           </DialogFooter>
         </DialogContent>
