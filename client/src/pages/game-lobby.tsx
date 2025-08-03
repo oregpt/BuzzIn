@@ -46,7 +46,8 @@ export default function GameLobby() {
 
   const joinByPasscodeMutation = useMutation({
     mutationFn: async (publicPasscode: string): Promise<GameWithPlayerCount> => {
-      return await apiRequest('POST', '/api/games/join-by-passcode', { publicPasscode }) as GameWithPlayerCount;
+      const response = await apiRequest('POST', '/api/games/join-by-passcode', { publicPasscode });
+      return await response.json() as GameWithPlayerCount;
     },
     onSuccess: (game: GameWithPlayerCount) => {
       console.log('Found private game:', game);
