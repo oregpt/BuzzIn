@@ -46,12 +46,11 @@ export default function GameLobby() {
 
   const joinByPasscodeMutation = useMutation({
     mutationFn: async (publicPasscode: string): Promise<GameWithPlayerCount> => {
-      const response = await apiRequest('POST', '/api/games/join-by-passcode', { publicPasscode });
-      return response as GameWithPlayerCount;
+      return await apiRequest('POST', '/api/games/join-by-passcode', { publicPasscode }) as GameWithPlayerCount;
     },
     onSuccess: (game: GameWithPlayerCount) => {
       setSelectedGame(game);
-      setJoinType('player');
+      setJoinType('host'); // Default to host for private games
       setShowPasscodeDialog(false);
       setJoinPasscode('');
       setShowJoinDialog(true);

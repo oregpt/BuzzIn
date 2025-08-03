@@ -101,6 +101,17 @@ Preferred communication style: Simple, everyday language.
 
 The application is structured for easy development with hot reloading and clear separation between frontend and backend concerns, while maintaining shared type safety through the common schema definitions.
 
+## Recent Enhancements (August 2025)
+
+### Comprehensive Privacy System (August 3, 2025)
+- **Two-Tier Privacy Protection**: Personal passcodes protect ALL host games (secure), public passcodes for sharing specific games (easy)
+- **Private Game Filtering**: Games with any passcode are completely hidden from public list
+- **Join Private Game Feature**: Players can find private games using public passcode
+- **Privacy Settings UI**: Clear messaging explains passcode complexity and usage
+- **Database Schema**: Added personal_passcode, public_passcode, and is_private fields
+- **API Endpoints**: Complete CRUD operations for privacy management and secure game access
+- **Public Deployment Ready**: System now supports secure public deployment with proper access control
+
 ## Recent Enhancements (January 2025)
 
 ### Question Editing System (July 31, 2025)
