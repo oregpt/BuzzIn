@@ -49,6 +49,8 @@ export default function GameLobby() {
       return await apiRequest('POST', '/api/games/join-by-passcode', { publicPasscode }) as GameWithPlayerCount;
     },
     onSuccess: (game: GameWithPlayerCount) => {
+      console.log('Found private game:', game);
+      console.log('Room code from API:', game.roomCode);
       setSelectedGame(game);
       setJoinType('host'); // Default to host for private games
       setShowPasscodeDialog(false);
@@ -190,6 +192,9 @@ export default function GameLobby() {
 
   const handleJoinDialogSubmit = () => {
     if (!selectedGame) return;
+
+    console.log('Joining with selectedGame:', selectedGame);
+    console.log('Room code being sent:', selectedGame.roomCode);
 
     if (joinType === 'host') {
       // Validate auth code is entered for host
